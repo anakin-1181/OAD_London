@@ -5,7 +5,7 @@ import path from "node:path";
 const root = process.cwd();
 const rawDir = path.join(root, "raw");
 const cacheDir = path.join(root, ".cache", "oad");
-const outputDir = path.join(root, "src", "data");
+const outputDir = path.join(root, "public", "data");
 
 const SOURCES = [
   {
@@ -46,7 +46,6 @@ const SOURCES = [
   }
 ];
 
-const LONDON_REGION_PARTS = new Set(["central", "east", "west", "north", "south of the river"]);
 const NON_LONDON_REGION_PARTS = new Set([
   "antwerp",
   "basque region",
@@ -180,11 +179,6 @@ function normaliseAddress(address = "") {
 
 function getRegionPart(rest) {
   return String(rest.regionName || "").split(",").slice(1).join(",").trim().toLowerCase();
-}
-
-function hasSuspiciousRegion(rest) {
-  const regionPart = getRegionPart(rest);
-  return Boolean(regionPart) && !LONDON_REGION_PARTS.has(regionPart);
 }
 
 function isKnownNonLondonRegion(rest) {
@@ -558,7 +552,12 @@ function buildMetadata(restaurants, excludedRecords) {
     title: "OAD Europe 2026 London Restaurants",
     generatedAt: new Date().toISOString(),
     source: "OAD Guides Europe 2026",
-    sourceLists: SOURCES.map(({ raw, estimatedPrice, priceBasis, ...source }) => source),
+    sourceLists: SOURCES.map((source) => ({
+      categoryId: source.categoryId,
+      category: source.category,
+      listId: source.listId,
+      sourceUrl: source.sourceUrl
+    })),
     restaurantCount: restaurants.length,
     listEntryCount: listEntries.length,
     excludedCount: excludedRecords.length,
