@@ -2,6 +2,7 @@ import { useEffect, type RefObject } from "react";
 import L, { type LayerGroup, type Map as LeafletMap } from "leaflet";
 import { categoryMeta, londonCenter } from "../domain/restaurantConfig";
 import { getBestRank, getPrimaryCategory, hasCoordinate } from "../domain/restaurants";
+import type { UserLocation } from "../domain/location";
 import type { Restaurant } from "../domain/types";
 
 type UseLeafletRestaurantMapOptions = {
@@ -9,13 +10,17 @@ type UseLeafletRestaurantMapOptions = {
   restaurants: Restaurant[];
   selectedId: string | undefined;
   onSelect: (restaurantId: string) => void;
+  userLocation?: UserLocation | undefined;
+  userLocationFocusKey?: number;
 };
 
 export function useLeafletRestaurantMap({
   mapNodeRef,
   restaurants,
   selectedId,
-  onSelect
+  onSelect,
+  userLocation,
+  userLocationFocusKey = 0
 }: UseLeafletRestaurantMapOptions) {
   useEffect(() => {
     const mapNode = mapNodeRef.current;
@@ -38,15 +43,18 @@ export function useLeafletRestaurantMap({
       .addTo(map);
 
     const layer = L.layerGroup().addTo(map);
+    const userLayer = L.layerGroup().addTo(map);
     mapNode.dataset.ready = "true";
     mapNode.__leafletMap = map;
     mapNode.__leafletLayer = layer;
+    mapNode.__leafletUserLayer = userLayer;
 
     return () => {
       map.remove();
       delete mapNode.dataset.ready;
       delete mapNode.__leafletMap;
       delete mapNode.__leafletLayer;
+      delete mapNode.__leafletUserLayer;
     };
   }, [mapNodeRef]);
 
@@ -80,6 +88,48 @@ export function useLeafletRestaurantMap({
   }, [mapNodeRef, onSelect, restaurants, selectedId]);
 
   useEffect(() => {
+    const userLayer = mapNodeRef.current?.__leafletUserLayer;
+    if (!userLayer) return;
+
+    userLayer.clearLayers();
+    if (!userLocation) return;
+
+    const position = L.latLng(userLocation.lat, userLocation.lng);
+    const accuracyRadius = Math.min(Math.max(userLocation.accuracy, 20), 2_500);
+
+    L.circle(position, {
+      radius: accuracyRadius,
+      color: "#2563eb",
+      fillColor: "#2563eb",
+      fillOpacity: 0.12,
+      weight: 1,
+      interactive: false,
+      className: "user-location-accuracy"
+    }).addTo(userLayer);
+
+    L.marker(position, {
+      icon: L.divIcon({
+        className: "user-location-marker",
+        html: '<span class="user-location-dot" aria-hidden="true"></span>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      }),
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 1_000
+    }).addTo(userLayer);
+  }, [mapNodeRef, userLocation]);
+
+  useEffect(() => {
+    const map = mapNodeRef.current?.__leafletMap;
+    if (!map || !userLocation || !userLocationFocusKey) return;
+
+    map.flyTo([userLocation.lat, userLocation.lng], Math.max(map.getZoom(), 15), {
+      duration: 0.75
+    });
+  }, [mapNodeRef, userLocation, userLocationFocusKey]);
+
+  useEffect(() => {
     const map = mapNodeRef.current?.__leafletMap;
     const selectedRestaurant = restaurants.find((restaurant) => restaurant.id === selectedId);
     if (!map || !selectedRestaurant || !hasCoordinate(selectedRestaurant)) return;
@@ -96,5 +146,6 @@ declare global {
   interface HTMLDivElement {
     __leafletMap?: LeafletMap;
     __leafletLayer?: LayerGroup;
+    __leafletUserLayer?: LayerGroup;
   }
 }

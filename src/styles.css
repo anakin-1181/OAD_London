@@ -77,6 +77,23 @@
   }
 }
 
+@keyframes location-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes user-location-pulse {
+  from {
+    opacity: 0.42;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -744,6 +761,87 @@ h1 {
   display: none;
 }
 
+.map-controls {
+  position: absolute;
+  right: 18px;
+  bottom: 98px;
+  z-index: var(--z-floating);
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.locate-button {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(241, 220, 202, 0.9);
+  border-radius: var(--radius);
+  background: rgba(255, 250, 244, 0.94);
+  color: var(--color-foreground);
+  box-shadow: var(--shadow-map);
+  backdrop-filter: blur(18px) saturate(1.12);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 180ms ease, color 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.locate-button:hover {
+  transform: translateY(-1px);
+  color: var(--color-accent);
+  border-color: rgba(37, 99, 235, 0.34);
+  background: #fff;
+}
+
+.locate-button.has-location {
+  color: #fff;
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.locate-button:disabled {
+  cursor: progress;
+  opacity: 0.76;
+}
+
+.locate-button.locating svg {
+  animation: location-spin 900ms linear infinite;
+}
+
+.location-feedback {
+  max-width: 260px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(241, 220, 202, 0.9);
+  border-radius: var(--radius);
+  background: rgba(255, 250, 244, 0.94);
+  color: var(--color-muted-strong);
+  box-shadow: var(--shadow-map);
+  backdrop-filter: blur(18px) saturate(1.12);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.25;
+  pointer-events: none;
+}
+
+.location-feedback.ready {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: rgba(234, 241, 255, 0.94);
+  color: #173f98;
+}
+
+.location-feedback.denied,
+.location-feedback.unavailable,
+.location-feedback.error {
+  border-color: #d7a531;
+  background: rgba(255, 244, 215, 0.96);
+  color: #70470b;
+}
+
 .map-topbar {
   top: 18px;
   left: 50%;
@@ -874,6 +972,42 @@ h1 {
   transform: scale(1.28);
   filter: saturate(1.18);
   box-shadow: 0 0 0 5px rgba(255, 250, 244, 0.86), 0 16px 30px rgba(15, 23, 42, 0.3);
+}
+
+.user-location-marker {
+  background: transparent;
+  border: 0;
+}
+
+.user-location-dot {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.user-location-dot::before,
+.user-location-dot::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+}
+
+.user-location-dot::before {
+  inset: 0;
+  background: rgba(37, 99, 235, 0.28);
+  animation: user-location-pulse 1.8s ease-out infinite;
+}
+
+.user-location-dot::after {
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border: 3px solid #fff;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2), 0 8px 18px rgba(15, 23, 42, 0.28);
+  transform: translate(-50%, -50%);
 }
 
 .detail-panel {
@@ -1255,6 +1389,7 @@ textarea:focus,
 .rank-grid a:focus-visible,
 .action-row a:focus-visible,
 .close-detail:focus-visible,
+.locate-button:focus-visible,
 .panel-toggle:focus-visible,
 .empty-state button:focus-visible {
   outline: 0;
@@ -1462,6 +1597,17 @@ textarea:focus,
     padding-bottom: 2px;
   }
 
+  .map-controls {
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 174px);
+    gap: 7px;
+  }
+
+  .location-feedback {
+    max-width: min(238px, calc(100vw - 24px));
+    font-size: 12px;
+  }
+
   .explorer-panel {
     position: fixed;
     left: max(8px, env(safe-area-inset-left, 0px));
@@ -1565,6 +1711,11 @@ textarea:focus,
   }
 
   .app-shell:not(.detail-collapsed) .mobile-site-banner {
+    display: none;
+  }
+
+  .app-shell:not(.explorer-collapsed) .map-controls,
+  .app-shell:not(.detail-collapsed) .map-controls {
     display: none;
   }
 
@@ -1716,6 +1867,19 @@ textarea:focus,
 
   .map-topbar {
     top: calc(env(safe-area-inset-top, 0px) + 76px);
+  }
+
+  .map-controls {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 166px);
+  }
+
+  .locate-button {
+    width: 46px;
+    height: 46px;
+  }
+
+  .location-feedback {
+    max-width: min(216px, calc(100vw - 20px));
   }
 
   .explorer-panel {

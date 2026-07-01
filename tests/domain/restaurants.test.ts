@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getGeolocationErrorMessage, getGeolocationErrorStatus } from "../../src/domain/location";
 import {
   buildAreaOptions,
   createInitialFilters,
@@ -142,5 +143,17 @@ describe("restaurant domain helpers", () => {
       { label: "East", count: 2 },
       { label: "Central", count: 1 }
     ]);
+  });
+});
+
+describe("location domain helpers", () => {
+  it("maps browser geolocation errors to user-facing states", () => {
+    expect(getGeolocationErrorStatus(1)).toBe("denied");
+    expect(getGeolocationErrorStatus(2)).toBe("unavailable");
+    expect(getGeolocationErrorStatus(3)).toBe("error");
+
+    expect(getGeolocationErrorMessage(1)).toContain("permission");
+    expect(getGeolocationErrorMessage(2)).toContain("unavailable");
+    expect(getGeolocationErrorMessage(3)).toContain("timed out");
   });
 });
