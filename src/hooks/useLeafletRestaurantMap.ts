@@ -10,6 +10,8 @@ type UseLeafletRestaurantMapOptions = {
   restaurants: Restaurant[];
   selectedId: string | undefined;
   onSelect: (restaurantId: string) => void;
+  savedHighlightActive?: boolean;
+  highlightedRestaurantIds?: string[];
   userLocation?: UserLocation | undefined;
   userLocationFocusKey?: number;
 };
@@ -19,6 +21,8 @@ export function useLeafletRestaurantMap({
   restaurants,
   selectedId,
   onSelect,
+  savedHighlightActive = false,
+  highlightedRestaurantIds = [],
   userLocation,
   userLocationFocusKey = 0
 }: UseLeafletRestaurantMapOptions) {
@@ -62,15 +66,18 @@ export function useLeafletRestaurantMap({
     const layer = mapNodeRef.current?.__leafletLayer;
     if (!layer) return;
 
+    const highlightedRestaurants = new Set(highlightedRestaurantIds);
     layer.clearLayers();
     restaurants.filter(hasCoordinate).forEach((restaurant) => {
       const category = getPrimaryCategory(restaurant);
-      const markerColor = categoryMeta[category].color;
+      const shouldDimMarker = savedHighlightActive && !highlightedRestaurants.has(restaurant.id);
+      const markerColor = shouldDimMarker ? "#94a3b8" : categoryMeta[category].color;
       const rank = getBestRank(restaurant);
       const rankLabel = rank < 9999 ? String(rank) : "";
       const selectedClass = restaurant.id === selectedId ? " marker-selected" : "";
+      const dimmedClass = shouldDimMarker ? " marker-dimmed" : "";
       const icon = L.divIcon({
-        className: `restaurant-marker${selectedClass}`,
+        className: `restaurant-marker${selectedClass}${dimmedClass}`,
         html: `<span style="--marker-color:${markerColor}">${rankLabel}</span>`,
         iconSize: [38, 38],
         iconAnchor: [19, 19]
@@ -85,7 +92,7 @@ export function useLeafletRestaurantMap({
         .bindTooltip(restaurant.displayName, { direction: "top", offset: [0, -15] })
         .addTo(layer);
     });
-  }, [mapNodeRef, onSelect, restaurants, selectedId]);
+  }, [highlightedRestaurantIds, mapNodeRef, onSelect, restaurants, savedHighlightActive, selectedId]);
 
   useEffect(() => {
     const userLayer = mapNodeRef.current?.__leafletUserLayer;

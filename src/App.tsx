@@ -14,6 +14,8 @@ function App() {
   const explorer = useRestaurantExplorer();
   const [isExplorerOpen, setIsExplorerOpen] = useState(() => !isCompactViewport());
   const [isDetailOpen, setIsDetailOpen] = useState(() => !isCompactViewport());
+  const [isSavedListOpen, setIsSavedListOpen] = useState(false);
+  const [isSavedHighlightActive, setIsSavedHighlightActive] = useState(false);
   const shellClassName = [
     "app-shell",
     isExplorerOpen ? "" : "explorer-collapsed",
@@ -28,6 +30,7 @@ function App() {
 
   function handleSelectRestaurant(restaurantId: string) {
     explorer.selectRestaurant(restaurantId);
+    setIsSavedListOpen(false);
     setIsDetailOpen(true);
   }
 
@@ -41,7 +44,16 @@ function App() {
           selectedRestaurant={explorer.selectedRestaurant}
           selectedId={explorer.selectedId}
           reviewCount={explorer.stats.reviewCount}
+          savedRestaurants={explorer.savedRestaurants}
+          savedListOpen={isSavedListOpen}
+          savedHighlightActive={isSavedHighlightActive}
           onSelect={handleSelectRestaurant}
+          onToggleSavedList={() => setIsSavedListOpen((isOpen) => !isOpen)}
+          onCloseSavedList={() => setIsSavedListOpen(false)}
+          onToggleSavedHighlight={() => {
+            setIsSavedListOpen(false);
+            setIsSavedHighlightActive((isActive) => !isActive);
+          }}
         />
       </Suspense>
       <header className="mobile-site-banner" aria-label="OAD London Food Map">
@@ -61,7 +73,10 @@ function App() {
         <button
           type="button"
           className="panel-toggle left"
-          onClick={() => setIsExplorerOpen((isOpen) => !isOpen)}
+          onClick={() => {
+            setIsSavedListOpen(false);
+            setIsExplorerOpen((isOpen) => !isOpen);
+          }}
           aria-label={isExplorerOpen ? "Hide search and filters panel" : "Show search and filters panel"}
           aria-pressed={isExplorerOpen}
           title={isExplorerOpen ? "Hide filters" : "Show filters"}
@@ -72,7 +87,10 @@ function App() {
         <button
           type="button"
           className="panel-toggle right"
-          onClick={() => setIsDetailOpen((isOpen) => !isOpen)}
+          onClick={() => {
+            setIsSavedListOpen(false);
+            setIsDetailOpen((isOpen) => !isOpen);
+          }}
           aria-label={isDetailOpen ? "Hide restaurant details panel" : "Show restaurant details panel"}
           aria-pressed={isDetailOpen}
           title={isDetailOpen ? "Hide details" : "Show details"}

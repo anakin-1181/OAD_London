@@ -6,6 +6,7 @@ import {
   createInitialFilters,
   filterRestaurants,
   getExplorerStats,
+  getSavedRestaurants,
   hasCoordinate
 } from "../domain/restaurants";
 import { useRestaurantDataset } from "./useRestaurantDataset";
@@ -28,6 +29,10 @@ export function useRestaurantExplorer() {
   const filteredRestaurants = useMemo(
     () => filterRestaurants(restaurants, filters, userRecords),
     [filters, restaurants, userRecords]
+  );
+  const savedRestaurants = useMemo(
+    () => getSavedRestaurants(restaurants, userRecords),
+    [restaurants, userRecords]
   );
   const mappedRestaurants = useMemo(() => filteredRestaurants.filter(hasCoordinate), [filteredRestaurants]);
   const stats = useMemo(
@@ -145,6 +150,7 @@ export function useRestaurantExplorer() {
     cuisineOptions,
     areaOptions,
     filteredRestaurants,
+    savedRestaurants,
     mappedRestaurants,
     stats,
     selectedRestaurant,

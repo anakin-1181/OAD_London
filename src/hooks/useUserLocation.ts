@@ -15,6 +15,10 @@ export function useUserLocation() {
   const [focusKey, setFocusKey] = useState(0);
 
   const requestLocation = useCallback(() => {
+    if (location) {
+      setFocusKey((current) => current + 1);
+    }
+
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setStatus("unavailable");
       setErrorMessage("Location is not available in this browser.");
@@ -37,7 +41,7 @@ export function useUserLocation() {
       },
       geolocationOptions
     );
-  }, []);
+  }, [location]);
 
   return {
     errorMessage,

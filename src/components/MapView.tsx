@@ -1,8 +1,8 @@
-import { useRef } from "react";
-import { LoaderCircle, LocateFixed, MapPin, Navigation, ShieldCheck } from "lucide-react";
+import { useMemo, useRef } from "react";
+import { CheckCircle2, Heart, LoaderCircle, LocateFixed, MapPin, Navigation, ShieldCheck, X } from "lucide-react";
 import type { LocationStatus } from "../domain/location";
 import { categoryMeta } from "../domain/restaurantConfig";
-import { getArea } from "../domain/restaurants";
+import { getArea, getBestRank, getHeroImage } from "../domain/restaurants";
 import { CATEGORY_IDS, type Restaurant } from "../domain/types";
 import { useLeafletRestaurantMap } from "../hooks/useLeafletRestaurantMap";
 import { useUserLocation } from "../hooks/useUserLocation";
@@ -13,7 +13,13 @@ type MapViewProps = {
   selectedRestaurant: Restaurant | undefined;
   selectedId: string | undefined;
   reviewCount: number;
+  savedRestaurants: Restaurant[];
+  savedListOpen: boolean;
+  savedHighlightActive: boolean;
   onSelect: (restaurantId: string) => void;
+  onToggleSavedList: () => void;
+  onCloseSavedList: () => void;
+  onToggleSavedHighlight: () => void;
 };
 
 export function MapView({
@@ -22,15 +28,21 @@ export function MapView({
   selectedRestaurant,
   selectedId,
   reviewCount,
-  onSelect
+  savedRestaurants,
+  savedListOpen,
+  savedHighlightActive,
+  onSelect,
+  onToggleSavedList,
+  onCloseSavedList,
+  onToggleSavedHighlight
 }: MapViewProps) {
   const mapNodeRef = useRef<HTMLDivElement | null>(null);
+  const savedRestaurantIds = useMemo(() => savedRestaurants.map((restaurant) => restaurant.id), [savedRestaurants]);
   const { errorMessage, focusKey, isLocating, location, requestLocation, status } = useUserLocation();
   const locationFeedback = getLocationFeedback(status, errorMessage);
   const locateButtonLabel = getLocateButtonLabel(status, Boolean(location));
   const locateButtonClassName = [
     "locate-button",
-    location ? "has-location" : "",
     isLocating ? "locating" : ""
   ]
     .filter(Boolean)
@@ -41,6 +53,8 @@ export function MapView({
     restaurants,
     selectedId,
     onSelect,
+    savedHighlightActive,
+    highlightedRestaurantIds: savedRestaurantIds,
     userLocation: location,
     userLocationFocusKey: focusKey
   });
@@ -48,6 +62,54 @@ export function MapView({
   return (
     <section className="map-stage" aria-label="Interactive restaurant map">
       <div ref={mapNodeRef} className="map-canvas" />
+
+      <button
+        type="button"
+        className={savedListOpen ? "map-saved-button active" : "map-saved-button"}
+        onClick={onToggleSavedList}
+        aria-controls="mobile-saved-restaurants"
+        aria-expanded={savedListOpen}
+        aria-label={savedListOpen ? "Close saved restaurants list" : "Open saved restaurants list"}
+        title={savedListOpen ? "Close saved restaurants" : "Open saved restaurants"}
+      >
+        <Heart size={18} aria-hidden="true" />
+        <span>Saved</span>
+        {savedRestaurants.length ? <strong>{savedRestaurants.length}</strong> : null}
+      </button>
+
+      {savedListOpen ? (
+        <section id="mobile-saved-restaurants" className="saved-list-popover" aria-label="Saved restaurants">
+          <header className="saved-list-header">
+            <div>
+              <span className="eyebrow">Your Shortlist</span>
+              <h2>Saved Restaurants</h2>
+            </div>
+            <button type="button" onClick={onCloseSavedList} aria-label="Close saved restaurants">
+              <X size={18} aria-hidden="true" />
+            </button>
+          </header>
+          {savedRestaurants.length ? (
+            <div className="saved-list-items">
+              {savedRestaurants.map((restaurant) => (
+                <SavedRestaurantButton
+                  key={restaurant.id}
+                  restaurant={restaurant}
+                  onSelect={() => {
+                    onCloseSavedList();
+                    onSelect(restaurant.id);
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="saved-list-empty">
+              <Heart size={20} aria-hidden="true" />
+              <strong>No saved restaurants yet</strong>
+              <span>Mark a place as Want, Booked, Visited, Loved, or add a note to save it here.</span>
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <div className="map-controls" aria-label="Map location controls">
         {locationFeedback ? (
@@ -88,6 +150,19 @@ export function MapView({
         </div>
       </div>
 
+      <button
+        type="button"
+        className={savedHighlightActive ? "map-visited-button active" : "map-visited-button"}
+        onClick={onToggleSavedHighlight}
+        aria-pressed={savedHighlightActive}
+        aria-label={savedHighlightActive ? "Restore normal map marker colors" : "Highlight saved and visited restaurants"}
+        title={savedHighlightActive ? "Restore marker colors" : "Highlight saved and visited restaurants"}
+      >
+        <CheckCircle2 size={17} aria-hidden="true" />
+        <span>Visited</span>
+        {savedRestaurants.length ? <strong>{savedRestaurants.length}</strong> : null}
+      </button>
+
       <div className="map-callout">
         <LocateFixed size={18} aria-hidden="true" />
         <div>
@@ -110,7 +185,6 @@ export function MapView({
 
 function getLocationFeedback(status: LocationStatus, errorMessage: string | undefined) {
   if (status === "locating") return "Finding your current location...";
-  if (status === "ready") return "Your location is on the map.";
   return errorMessage;
 }
 
@@ -118,4 +192,30 @@ function getLocateButtonLabel(status: LocationStatus, hasLocation: boolean) {
   if (status === "locating") return "Finding your current location";
   if (hasLocation) return "Recenter map on your current location";
   return "Show my current location on the map";
+}
+
+type SavedRestaurantButtonProps = {
+  restaurant: Restaurant;
+  onSelect: () => void;
+};
+
+function SavedRestaurantButton({ restaurant, onSelect }: SavedRestaurantButtonProps) {
+  const heroImage = getHeroImage(restaurant);
+  const rank = getBestRank(restaurant);
+  const rankLabel = rank < 9999 ? `#${rank}` : "Review";
+
+  return (
+    <button type="button" className="saved-list-row" onClick={onSelect}>
+      <span className="saved-list-media" aria-hidden="true">
+        {heroImage ? <img src={heroImage} alt="" /> : restaurant.displayName.slice(0, 1)}
+      </span>
+      <span className="saved-list-main">
+        <strong>{restaurant.displayName}</strong>
+        <small>
+          {restaurant.cuisine || "Cuisine"} · {restaurant.estimatedPrice} · {getArea(restaurant)}
+        </small>
+      </span>
+      <span className="saved-list-rank">{rankLabel}</span>
+    </button>
+  );
 }

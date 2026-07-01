@@ -8,6 +8,7 @@ import {
   getBestRank,
   getExplorerStats,
   getPrimaryCategory,
+  getSavedRestaurants,
   needsReview
 } from "../../src/domain/restaurants";
 import type { Restaurant } from "../../src/domain/types";
@@ -129,6 +130,21 @@ describe("restaurant domain helpers", () => {
     expect(stats.reviewCount).toBe(2);
     expect(stats.savedCount).toBe(2);
     expect(stats.lovedCount).toBe(1);
+  });
+
+  it("builds a rank-sorted saved shortlist from statuses and notes", () => {
+    const restaurants = [
+      makeRestaurant({ id: "unsaved", displayName: "Unsaved", listEntries: [{ ...baseRestaurant.listEntries[0], rank: 1 }] }),
+      makeRestaurant({ id: "note", displayName: "Note Saved", listEntries: [{ ...baseRestaurant.listEntries[0], rank: 18 }] }),
+      makeRestaurant({ id: "status", displayName: "Status Saved", listEntries: [{ ...baseRestaurant.listEntries[0], rank: 4 }] })
+    ];
+
+    const saved = getSavedRestaurants(restaurants, {
+      note: { note: "Try the counter" },
+      status: { status: "want" }
+    });
+
+    expect(saved.map((restaurant) => restaurant.id)).toEqual(["status", "note"]);
   });
 
   it("builds area options from the OAD region suffix", () => {

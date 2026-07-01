@@ -61,6 +61,10 @@ export function isSaved(restaurant: Restaurant, userRecords: UserRecords): boole
   return Boolean(record?.status || record?.note);
 }
 
+export function getSavedRestaurants(restaurants: Restaurant[], userRecords: UserRecords): Restaurant[] {
+  return sortRestaurants(restaurants.filter((restaurant) => isSaved(restaurant, userRecords)), "rank");
+}
+
 export function cuisineMatches(restaurant: Restaurant, cuisine: string): boolean {
   if (cuisine === "all") return true;
   const current = restaurant.cuisine.toLowerCase();
