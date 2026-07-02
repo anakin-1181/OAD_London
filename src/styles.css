@@ -1088,6 +1088,102 @@ h1 {
   color: #70470b;
 }
 
+.location-permission-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(10px);
+  padding: 18px;
+}
+
+.location-permission-dialog {
+  position: relative;
+  width: min(420px, calc(100vw - 36px));
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(241, 220, 202, 0.94);
+  border-radius: var(--radius);
+  background: rgba(255, 250, 244, 0.98);
+  box-shadow: 0 26px 70px rgba(15, 23, 42, 0.28);
+  padding: 18px;
+}
+
+.location-permission-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(241, 220, 202, 0.9);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.location-permission-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.location-permission-copy {
+  display: grid;
+  gap: 8px;
+  padding-right: 34px;
+}
+
+.location-permission-copy h2 {
+  font-size: 25px;
+  line-height: 1;
+}
+
+.location-permission-copy p {
+  color: var(--color-muted-strong);
+  font-size: 14px;
+  line-height: 1.42;
+}
+
+.location-permission-note {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 10px;
+}
+
+.location-permission-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.location-permission-actions button {
+  min-height: 46px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 900;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.location-permission-actions .secondary-action {
+  background: #fff;
+  color: var(--color-muted-strong);
+}
+
+.location-permission-actions .primary-action {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+}
+
 .map-topbar {
   top: 18px;
   left: 50%;
@@ -1606,6 +1702,7 @@ textarea {
 .rank-grid a:hover,
 .status-button:hover,
 .action-row a:hover,
+.location-permission-actions button:hover,
 .empty-state button:hover {
   transform: translateY(-1px);
 }
@@ -1629,6 +1726,10 @@ textarea {
   box-shadow: var(--shadow-tight);
 }
 
+.location-permission-actions button:hover {
+  box-shadow: var(--shadow-tight);
+}
+
 .search-box:focus-within,
 .select-control:focus-within,
 textarea:focus,
@@ -1644,6 +1745,8 @@ textarea:focus,
 .locate-button:focus-visible,
 .map-saved-button:focus-visible,
 .map-visited-button:focus-visible,
+.location-permission-close:focus-visible,
+.location-permission-actions button:focus-visible,
 .saved-list-header button:focus-visible,
 .saved-list-row:focus-visible,
 .panel-toggle:focus-visible,
@@ -1938,6 +2041,30 @@ textarea:focus,
   .location-feedback {
     max-width: min(238px, calc(100vw - 24px));
     font-size: 12px;
+  }
+
+  .location-permission-overlay {
+    align-items: end;
+    padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 86px);
+  }
+
+  .location-permission-dialog {
+    width: 100%;
+    gap: 12px;
+    padding: 16px;
+    animation: mobile-sheet-enter 180ms ease both;
+  }
+
+  .location-permission-copy {
+    padding-right: 32px;
+  }
+
+  .location-permission-copy h2 {
+    font-size: 24px;
+  }
+
+  .location-permission-actions button {
+    min-height: 48px;
   }
 
   .explorer-panel {

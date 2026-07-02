@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { CheckCircle2, Heart, LoaderCircle, LocateFixed, MapPin, Navigation, ShieldCheck, X } from "lucide-react";
 import type { LocationStatus } from "../domain/location";
 import { categoryMeta } from "../domain/restaurantConfig";
@@ -37,10 +37,12 @@ export function MapView({
   onToggleSavedHighlight
 }: MapViewProps) {
   const mapNodeRef = useRef<HTMLDivElement | null>(null);
+  const [locationPromptOpen, setLocationPromptOpen] = useState(false);
   const savedRestaurantIds = useMemo(() => savedRestaurants.map((restaurant) => restaurant.id), [savedRestaurants]);
   const { errorMessage, focusKey, isLocating, location, requestLocation, status } = useUserLocation();
   const locationFeedback = getLocationFeedback(status, errorMessage);
   const locateButtonLabel = getLocateButtonLabel(status, Boolean(location));
+  const locationPromptCopy = getLocationPromptCopy(status);
   const locateButtonClassName = [
     "locate-button",
     isLocating ? "locating" : ""
@@ -58,6 +60,20 @@ export function MapView({
     userLocation: location,
     userLocationFocusKey: focusKey
   });
+
+  function handleLocateClick() {
+    if (location) {
+      requestLocation();
+      return;
+    }
+
+    setLocationPromptOpen(true);
+  }
+
+  function handleAllowLocation() {
+    setLocationPromptOpen(false);
+    requestLocation();
+  }
 
   return (
     <section className="map-stage" aria-label="Interactive restaurant map">
@@ -124,7 +140,7 @@ export function MapView({
         <button
           type="button"
           className={locateButtonClassName}
-          onClick={requestLocation}
+          onClick={handleLocateClick}
           disabled={isLocating}
           aria-label={locateButtonLabel}
           title={locateButtonLabel}
@@ -132,6 +148,46 @@ export function MapView({
           {isLocating ? <LoaderCircle size={20} aria-hidden="true" /> : <LocateFixed size={20} aria-hidden="true" />}
         </button>
       </div>
+
+      {locationPromptOpen ? (
+        <div className="location-permission-overlay" role="presentation">
+          <section
+            className="location-permission-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="location-permission-title"
+            aria-describedby="location-permission-copy location-permission-safari"
+          >
+            <button
+              type="button"
+              className="location-permission-close"
+              onClick={() => setLocationPromptOpen(false)}
+              aria-label="Close location permission prompt"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+            <div className="location-permission-icon" aria-hidden="true">
+              <LocateFixed size={23} />
+            </div>
+            <div className="location-permission-copy">
+              <span className="eyebrow">{locationPromptCopy.eyebrow}</span>
+              <h2 id="location-permission-title">{locationPromptCopy.title}</h2>
+              <p id="location-permission-copy">{locationPromptCopy.body}</p>
+              <p id="location-permission-safari" className="location-permission-note">
+                {locationPromptCopy.note}
+              </p>
+            </div>
+            <div className="location-permission-actions">
+              <button type="button" className="secondary-action" onClick={() => setLocationPromptOpen(false)}>
+                Not now
+              </button>
+              <button type="button" className="primary-action" onClick={handleAllowLocation}>
+                Allow location
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       <div className="map-topbar">
         <div>
@@ -192,6 +248,24 @@ function getLocateButtonLabel(status: LocationStatus, hasLocation: boolean) {
   if (status === "locating") return "Finding your current location";
   if (hasLocation) return "Recenter map on your current location";
   return "Show my current location on the map";
+}
+
+function getLocationPromptCopy(status: LocationStatus) {
+  if (status === "denied") {
+    return {
+      eyebrow: "Safari Location",
+      title: "Location is blocked",
+      body: "Safari has blocked location for this site, so the map cannot open the native permission prompt yet.",
+      note: "On iPhone, tap the Aa icon, open Website Settings, set Location to Allow, then press Allow location again."
+    };
+  }
+
+  return {
+    eyebrow: "Map Location",
+    title: "Allow location access?",
+    body: "We use your current position only to center the map and show your blue dot near London restaurants.",
+    note: "Press Allow location and Safari should show its system permission prompt. Your position is not saved."
+  };
 }
 
 type SavedRestaurantButtonProps = {

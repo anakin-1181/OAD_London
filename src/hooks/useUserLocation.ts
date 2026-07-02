@@ -25,6 +25,12 @@ export function useUserLocation() {
       return;
     }
 
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setStatus("unavailable");
+      setErrorMessage("Location requires a secure HTTPS page. Open the Vercel https URL in Safari, then try again.");
+      return;
+    }
+
     setStatus("locating");
     setErrorMessage(undefined);
 
