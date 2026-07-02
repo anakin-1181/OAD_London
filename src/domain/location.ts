@@ -29,7 +29,7 @@ export function getGeolocationErrorStatus(errorCode: number): LocationStatus {
 }
 
 export function getGeolocationErrorMessage(errorCode: number) {
-  if (errorCode === 1) return "Location permission is blocked for this site. In Safari, open Website Settings, allow Location, then try again.";
+  if (errorCode === 1) return "Location permission is blocked. Allow Location in Safari website settings or iPhone Location Services, then try again.";
   if (errorCode === 2) return "Your current position is unavailable. Try again near a stronger signal.";
   if (errorCode === 3) return "Location lookup timed out. Try again in a moment.";
   return "Could not find your location. Try again in a moment.";

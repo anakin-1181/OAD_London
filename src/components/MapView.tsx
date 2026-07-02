@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Heart, LoaderCircle, LocateFixed, MapPin, Navigation, ShieldCheck, X } from "lucide-react";
 import type { LocationStatus } from "../domain/location";
 import { categoryMeta } from "../domain/restaurantConfig";
@@ -42,7 +42,7 @@ export function MapView({
   const { errorMessage, focusKey, isLocating, location, requestLocation, status } = useUserLocation();
   const locationFeedback = getLocationFeedback(status, errorMessage);
   const locateButtonLabel = getLocateButtonLabel(status, Boolean(location));
-  const locationPromptCopy = getLocationPromptCopy(status);
+  const locationPromptCopy = getLocationPromptCopy(status, errorMessage);
   const locateButtonClassName = [
     "locate-button",
     isLocating ? "locating" : ""
@@ -61,16 +61,18 @@ export function MapView({
     userLocationFocusKey: focusKey
   });
 
-  function handleLocateClick() {
-    if (location) {
-      requestLocation();
-      return;
+  useEffect(() => {
+    if (status === "denied" || status === "unavailable") {
+      setLocationPromptOpen(true);
     }
+  }, [status]);
 
-    setLocationPromptOpen(true);
+  function handleLocateClick() {
+    setLocationPromptOpen(false);
+    requestLocation();
   }
 
-  function handleAllowLocation() {
+  function handleTryLocationAgain() {
     setLocationPromptOpen(false);
     requestLocation();
   }
@@ -181,8 +183,8 @@ export function MapView({
               <button type="button" className="secondary-action" onClick={() => setLocationPromptOpen(false)}>
                 Not now
               </button>
-              <button type="button" className="primary-action" onClick={handleAllowLocation}>
-                Allow location
+              <button type="button" className="primary-action" onClick={handleTryLocationAgain}>
+                Try again
               </button>
             </div>
           </section>
@@ -250,21 +252,30 @@ function getLocateButtonLabel(status: LocationStatus, hasLocation: boolean) {
   return "Show my current location on the map";
 }
 
-function getLocationPromptCopy(status: LocationStatus) {
+function getLocationPromptCopy(status: LocationStatus, errorMessage: string | undefined) {
   if (status === "denied") {
     return {
       eyebrow: "Safari Location",
       title: "Location is blocked",
-      body: "Safari has blocked location for this site, so the map cannot open the native permission prompt yet.",
-      note: "On iPhone, tap the Aa icon, open Website Settings, set Location to Allow, then press Allow location again."
+      body: "Safari returned a blocked permission state before showing the Apple location prompt.",
+      note: "Check Safari's Aa menu: Website Settings > Location > Allow. Also check iPhone Settings: Privacy & Security > Location Services > Safari Websites > While Using the App. Then tap Try again."
+    };
+  }
+
+  if (status === "unavailable") {
+    return {
+      eyebrow: "Location Setup",
+      title: "Location is unavailable",
+      body: errorMessage || "This browser cannot access location right now.",
+      note: "Open the HTTPS Vercel URL in Safari and make sure iPhone Location Services are enabled. Then tap Try again."
     };
   }
 
   return {
     eyebrow: "Map Location",
     title: "Allow location access?",
-    body: "We use your current position only to center the map and show your blue dot near London restaurants.",
-    note: "Press Allow location and Safari should show its system permission prompt. Your position is not saved."
+    body: "Safari should show its Apple location prompt after you tap the locate button.",
+    note: "Your position is only used to center the map and show your blue dot. It is not saved."
   };
 }
 
