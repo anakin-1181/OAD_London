@@ -10,7 +10,7 @@ import {
   normalizeUserRecord,
   saveUserRecordsToStorage
 } from "../domain/userRecords";
-import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { isSupabaseConfigured, supabase, supabaseAnonKey } from "../lib/supabase";
 
 const IMPORTED_USERS_KEY = `${STORAGE_KEY}:imported-cloud-users`;
 
@@ -167,15 +167,19 @@ export function useUserRecords() {
     setAuthStatus("loading");
     setAuthError(undefined);
     const redirectTo = typeof window === "undefined" ? undefined : window.location.origin;
+    const options = redirectTo
+      ? {
+          redirectTo,
+          queryParams: { apikey: supabaseAnonKey }
+        }
+      : {
+          queryParams: { apikey: supabaseAnonKey }
+        };
     const { error } = await supabase.auth.signInWithOAuth(
-      redirectTo
-        ? {
-            provider: "google",
-            options: { redirectTo }
-          }
-        : {
-            provider: "google"
-          }
+      {
+        provider: "google",
+        options
+      }
     );
 
     if (error) {

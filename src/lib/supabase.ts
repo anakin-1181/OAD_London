@@ -36,8 +36,8 @@ type Database = {
   };
 };
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const supabaseUrl = normalizeEnvValue(import.meta.env.VITE_SUPABASE_URL);
+export const supabaseAnonKey = normalizeEnvValue(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -50,3 +50,7 @@ export const supabase: SupabaseClient<Database> | null = isSupabaseConfigured
       }
     })
   : null;
+
+function normalizeEnvValue(value: string | undefined) {
+  return value?.trim().replace(/^["']|["']$/g, "") || "";
+}
