@@ -16,7 +16,7 @@ export function useRestaurantExplorer() {
   const [filters, setFilters] = useState<RestaurantFilters>(() => createInitialFilters());
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const { dataset, isLoading, error } = useRestaurantDataset();
-  const { userRecords, updateRecord, toggleStatus } = useUserRecords();
+  const { authError, authStatus, authUser, signInWithGoogle, signOut, userRecords, updateRecord, toggleStatus } = useUserRecords();
   const restaurants = dataset.restaurants;
 
   useEffect(() => {
@@ -157,6 +157,13 @@ export function useRestaurantExplorer() {
     selectedRecord,
     selectedId,
     userRecords,
+    auth: {
+      error: authError,
+      signInWithGoogle,
+      signOut,
+      status: authStatus,
+      user: authUser
+    },
     activeFilterCount,
     setQuery: (query: string) => patchFilters({ query }),
     setCuisineFilter: (cuisineFilter: string) => patchFilters({ cuisineFilter }),

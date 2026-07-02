@@ -24,6 +24,7 @@ import {
 } from "../domain/restaurants";
 import { CATEGORY_IDS, PRICE_TIERS, type DiscoveryPreset, type PriceTier, type Restaurant } from "../domain/types";
 import type { RestaurantExplorer } from "../hooks/useRestaurantExplorer";
+import { AuthControl } from "./AuthControl";
 
 type ExplorerPanelProps = {
   explorer: RestaurantExplorer;
@@ -45,9 +46,18 @@ export function ExplorerPanel({ explorer }: ExplorerPanelProps) {
           <h1>London Food Map</h1>
           <p>Find the right London restaurant by rank, mood, area, price, and your own shortlist.</p>
         </div>
-        <div className="source-lockup" aria-label={`${explorer.stats.total} restaurants in dataset`}>
-          <strong>{explorer.isLoading ? "..." : explorer.stats.total}</strong>
-          <span>places</span>
+        <div className="header-actions">
+          <AuthControl
+            error={explorer.auth.error}
+            onSignIn={explorer.auth.signInWithGoogle}
+            onSignOut={explorer.auth.signOut}
+            status={explorer.auth.status}
+            user={explorer.auth.user}
+          />
+          <div className="source-lockup" aria-label={`${explorer.stats.total} restaurants in dataset`}>
+            <strong>{explorer.isLoading ? "..." : explorer.stats.total}</strong>
+            <span>places</span>
+          </div>
         </div>
       </header>
 

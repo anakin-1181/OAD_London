@@ -206,6 +206,12 @@ a {
   align-items: start;
 }
 
+.header-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
 .eyebrow {
   display: block;
   color: var(--color-primary-strong);
@@ -257,6 +263,87 @@ h1 {
   font-size: 11px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.76);
+}
+
+.auth-control {
+  max-width: 190px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-foreground);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  padding: 6px 9px;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.auth-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.auth-control.signed-in {
+  border-color: rgba(37, 99, 235, 0.26);
+  background: #f8fbff;
+}
+
+.auth-control.has-error {
+  border-color: #d7a531;
+  background: #fff8e6;
+}
+
+.auth-avatar {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.auth-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.auth-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.auth-text strong,
+.auth-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-text strong {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.auth-text small {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.auth-action-icon {
+  flex: 0 0 auto;
+  color: var(--color-muted);
 }
 
 .metric-strip {
@@ -1695,6 +1782,7 @@ textarea {
 }
 
 .preset-button:hover,
+.auth-control:hover:not(:disabled),
 .category-chip:hover,
 .price-chip:hover,
 .toggle-pill:hover,
@@ -1709,6 +1797,7 @@ textarea {
 
 .restaurant-row:hover,
 .restaurant-row.selected,
+.auth-control:hover:not(:disabled),
 .preset-button:hover,
 .rank-grid a:hover {
   border-color: var(--color-border-strong);
@@ -1738,6 +1827,7 @@ textarea:focus,
 .toggle-pill:focus-visible,
 .restaurant-row:focus-visible,
 .preset-button:focus-visible,
+.auth-control:focus-visible,
 .status-button:focus-visible,
 .rank-grid a:focus-visible,
 .action-row a:focus-visible,
@@ -1887,7 +1977,7 @@ textarea:focus,
     z-index: 710;
     min-height: 66px;
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-columns: 44px minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 10px;
     border: 1px solid rgba(241, 220, 202, 0.92);
@@ -1897,6 +1987,31 @@ textarea:focus,
     backdrop-filter: blur(18px) saturate(1.12);
     padding: 10px 12px;
     pointer-events: none;
+  }
+
+  .mobile-site-banner .auth-control {
+    pointer-events: auto;
+  }
+
+  .auth-control-mobile {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    max-width: none;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .auth-control-mobile .auth-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .auth-control-mobile .auth-text,
+  .auth-control-mobile .auth-action-icon {
+    display: none;
   }
 
   .mobile-site-mark {
@@ -2317,7 +2432,7 @@ textarea:focus,
   .mobile-site-banner {
     top: calc(env(safe-area-inset-top, 0px) + 10px);
     min-height: 58px;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-columns: 40px minmax(0, 1fr) auto auto;
     gap: 8px;
     padding: 8px 10px;
   }
@@ -2338,6 +2453,12 @@ textarea:focus,
   .mobile-site-stat {
     min-width: 50px;
     height: 40px;
+  }
+
+  .auth-control-mobile {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
   }
 
   .map-topbar {

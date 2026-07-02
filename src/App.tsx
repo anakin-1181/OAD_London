@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { MapPinned, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { AuthControl } from "./components/AuthControl";
 import { ExplorerPanel } from "./components/ExplorerPanel";
 import { RestaurantDetail } from "./components/RestaurantDetail";
 import { useRestaurantExplorer } from "./hooks/useRestaurantExplorer";
@@ -68,6 +69,14 @@ function App() {
           <strong>{explorer.isLoading ? "..." : explorer.stats.total}</strong>
           <span>places</span>
         </div>
+        <AuthControl
+          error={explorer.auth.error}
+          onSignIn={explorer.auth.signInWithGoogle}
+          onSignOut={explorer.auth.signOut}
+          status={explorer.auth.status}
+          user={explorer.auth.user}
+          variant="mobile"
+        />
       </header>
       <div className="panel-toggle-cluster" aria-label="Panel visibility controls">
         <button
