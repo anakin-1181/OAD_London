@@ -5,9 +5,11 @@ import {
   createInitialFilters,
   filterRestaurants,
   getArea,
+  getBranchCountLabel,
   getBestRank,
   getExplorerStats,
   getPrimaryCategory,
+  getRestaurantBranches,
   getSavedRestaurants,
   needsReview
 } from "../../src/domain/restaurants";
@@ -145,6 +147,50 @@ describe("restaurant domain helpers", () => {
     });
 
     expect(saved.map((restaurant) => restaurant.id)).toEqual(["status", "note"]);
+  });
+
+  it("keeps branch pins grouped under a parent restaurant record", () => {
+    const restaurant = makeRestaurant({
+      id: "hoppers",
+      displayName: "Hoppers",
+      branches: [
+        {
+          id: "hoppers:google:soho",
+          restaurantId: "hoppers",
+          displayName: "Hoppers Soho",
+          address: "49 Frith Street, London W1D 4SG",
+          lat: 51.5139,
+          lng: -0.1322,
+          phone: null,
+          website: "https://www.hopperslondon.com/",
+          googlePlaceId: "soho",
+          googleMapsUri: "https://maps.google.com/?cid=soho",
+          businessStatus: "OPERATIONAL",
+          confidence: 0.9,
+          isPrimary: true,
+          sources: [{ type: "google-places", label: "Google Places match" }]
+        },
+        {
+          id: "hoppers:google:kings-cross",
+          restaurantId: "hoppers",
+          displayName: "Hoppers King's Cross",
+          address: "Pancras Square, London N1C 4AG",
+          lat: 51.5321,
+          lng: -0.1253,
+          phone: null,
+          website: "https://www.hopperslondon.com/",
+          googlePlaceId: "kings-cross",
+          googleMapsUri: "https://maps.google.com/?cid=kings-cross",
+          businessStatus: "OPERATIONAL",
+          confidence: 0.84,
+          sources: [{ type: "google-places", label: "Google Places match" }]
+        }
+      ]
+    });
+
+    expect(getRestaurantBranches(restaurant)).toHaveLength(2);
+    expect(getBranchCountLabel(restaurant)).toBe("2 London branches");
+    expect(getSavedRestaurants([restaurant], { hoppers: { status: "visited" } }).map((item) => item.id)).toEqual(["hoppers"]);
   });
 
   it("builds area options from the OAD region suffix", () => {

@@ -1,0 +1,59 @@
+name: Verify restaurant data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "21 6 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  verify:
+    name: Verify OAD London restaurants
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+      VERIFY_WEBSITES: "0"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check Google Places secret
+        run: node -e "if (!process.env.GOOGLE_PLACES_API_KEY) { throw new Error('Missing GOOGLE_PLACES_API_KEY repository secret') }"
+
+      - name: Verify restaurant data
+        run: npm run data:verify
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Open data review pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/verify-restaurant-data
+          commit-message: "Verify OAD London restaurant data"
+          title: "Verify OAD London restaurant data"
+          body-path: reports/data-verification.md
+          labels: data, automated
+          delete-branch: true

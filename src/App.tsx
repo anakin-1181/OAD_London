@@ -29,8 +29,8 @@ function App() {
     selectRestaurant: handleSelectRestaurant
   };
 
-  function handleSelectRestaurant(restaurantId: string) {
-    explorer.selectRestaurant(restaurantId);
+  function handleSelectRestaurant(restaurantId: string, branchId?: string) {
+    explorer.selectRestaurant(restaurantId, branchId);
     setIsSavedListOpen(false);
     setIsDetailOpen(true);
   }
@@ -43,7 +43,9 @@ function App() {
           restaurants={explorer.mappedRestaurants}
           filteredCount={explorer.filteredRestaurants.length}
           selectedRestaurant={explorer.selectedRestaurant}
+          selectedBranch={explorer.selectedBranch}
           selectedId={explorer.selectedId}
+          selectedBranchId={explorer.selectedBranchId}
           reviewCount={explorer.stats.reviewCount}
           savedRestaurants={explorer.savedRestaurants}
           savedListOpen={isSavedListOpen}
@@ -111,8 +113,11 @@ function App() {
       {isDetailOpen ? (
         <RestaurantDetail
           restaurant={explorer.selectedRestaurant}
+          selectedBranch={explorer.selectedBranch}
+          selectedBranchId={explorer.selectedBranchId}
           userRecord={explorer.selectedRecord}
           onClose={() => setIsDetailOpen(false)}
+          onSelectBranch={explorer.selectBranch}
           onUpdateRecord={explorer.updateSelectedRecord}
           onToggleStatus={explorer.toggleSelectedStatus}
         />

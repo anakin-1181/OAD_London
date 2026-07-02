@@ -2,8 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Heart, LoaderCircle, LocateFixed, MapPin, Navigation, ShieldCheck, X } from "lucide-react";
 import type { LocationStatus } from "../domain/location";
 import { categoryMeta } from "../domain/restaurantConfig";
-import { getArea, getBestRank, getHeroImage } from "../domain/restaurants";
-import { CATEGORY_IDS, type Restaurant } from "../domain/types";
+import {
+  getArea,
+  getBestRank,
+  getBranchCountLabel,
+  getHeroImage,
+  getRestaurantBranches,
+  hasBranchCoordinate
+} from "../domain/restaurants";
+import { CATEGORY_IDS, type Restaurant, type RestaurantBranch } from "../domain/types";
 import { useLeafletRestaurantMap } from "../hooks/useLeafletRestaurantMap";
 import { useUserLocation } from "../hooks/useUserLocation";
 
@@ -11,12 +18,14 @@ type MapViewProps = {
   restaurants: Restaurant[];
   filteredCount: number;
   selectedRestaurant: Restaurant | undefined;
+  selectedBranch: RestaurantBranch | undefined;
   selectedId: string | undefined;
+  selectedBranchId: string | undefined;
   reviewCount: number;
   savedRestaurants: Restaurant[];
   savedListOpen: boolean;
   savedHighlightActive: boolean;
-  onSelect: (restaurantId: string) => void;
+  onSelect: (restaurantId: string, branchId?: string) => void;
   onToggleSavedList: () => void;
   onCloseSavedList: () => void;
   onToggleSavedHighlight: () => void;
@@ -26,7 +35,9 @@ export function MapView({
   restaurants,
   filteredCount,
   selectedRestaurant,
+  selectedBranch,
   selectedId,
+  selectedBranchId,
   reviewCount,
   savedRestaurants,
   savedListOpen,
@@ -39,6 +50,10 @@ export function MapView({
   const mapNodeRef = useRef<HTMLDivElement | null>(null);
   const [locationPromptOpen, setLocationPromptOpen] = useState(false);
   const savedRestaurantIds = useMemo(() => savedRestaurants.map((restaurant) => restaurant.id), [savedRestaurants]);
+  const branchPinCount = useMemo(
+    () => restaurants.reduce((count, restaurant) => count + getRestaurantBranches(restaurant).filter(hasBranchCoordinate).length, 0),
+    [restaurants]
+  );
   const { errorMessage, focusKey, isLocating, location, requestLocation, status } = useUserLocation();
   const locationFeedback = getLocationFeedback(status, errorMessage);
   const locateButtonLabel = getLocateButtonLabel(status, Boolean(location));
@@ -54,6 +69,7 @@ export function MapView({
     mapNodeRef,
     restaurants,
     selectedId,
+    selectedBranchId,
     onSelect,
     savedHighlightActive,
     highlightedRestaurantIds: savedRestaurantIds,
@@ -195,12 +211,12 @@ export function MapView({
         <div>
           <MapPin size={17} aria-hidden="true" />
           <span>
-            {restaurants.length}/{filteredCount} mapped
+            {branchPinCount}/{filteredCount} pins
           </span>
         </div>
         <div>
           <Navigation size={17} aria-hidden="true" />
-          <span>{selectedRestaurant ? getArea(selectedRestaurant) : "London"}</span>
+          <span>{selectedRestaurant ? getSelectedAreaLabel(selectedRestaurant, selectedBranch) : "London"}</span>
         </div>
         <div>
           <ShieldCheck size={17} aria-hidden="true" />
@@ -225,7 +241,11 @@ export function MapView({
         <LocateFixed size={18} aria-hidden="true" />
         <div>
           <strong>{selectedRestaurant?.displayName || "Choose a restaurant"}</strong>
-          <span>{selectedRestaurant ? `${selectedRestaurant.cuisine || "Cuisine"} · ${selectedRestaurant.estimatedPrice}` : "Select a pin or a result to inspect the place."}</span>
+          <span>
+            {selectedRestaurant
+              ? [getBranchCountLabel(selectedRestaurant), selectedBranch?.displayName, selectedRestaurant.estimatedPrice].filter(Boolean).join(" · ")
+              : "Select a pin or a result to inspect the place."}
+          </span>
         </div>
       </div>
 
@@ -244,6 +264,12 @@ export function MapView({
 function getLocationFeedback(status: LocationStatus, errorMessage: string | undefined) {
   if (status === "locating") return "Finding your current location...";
   return errorMessage;
+}
+
+function getSelectedAreaLabel(restaurant: Restaurant, branch: RestaurantBranch | undefined) {
+  if (!branch?.address) return getArea(restaurant);
+  const parts = branch.address.split(",").map((part) => part.trim()).filter(Boolean);
+  return parts.slice(-3, -1).join(", ") || getArea(restaurant);
 }
 
 function getLocateButtonLabel(status: LocationStatus, hasLocation: boolean) {
@@ -297,7 +323,7 @@ function SavedRestaurantButton({ restaurant, onSelect }: SavedRestaurantButtonPr
       <span className="saved-list-main">
         <strong>{restaurant.displayName}</strong>
         <small>
-          {restaurant.cuisine || "Cuisine"} · {restaurant.estimatedPrice} · {getArea(restaurant)}
+          {[restaurant.cuisine || "Cuisine", restaurant.estimatedPrice, getBranchCountLabel(restaurant) || getArea(restaurant)].join(" · ")}
         </small>
       </span>
       <span className="saved-list-rank">{rankLabel}</span>

@@ -15,28 +15,38 @@ import {
 } from "lucide-react";
 import { categoryMeta, statusLabels } from "../domain/restaurantConfig";
 import {
+  buildBranchMapSearchUrl,
   buildMapSearchUrl,
   buildRestaurantReasons,
+  getBranchCountLabel,
   getArea,
+  getBranchById,
   getHeroImage,
   getPrimaryCategory,
+  getRestaurantBranches,
   hasCoordinate,
   needsReview
 } from "../domain/restaurants";
-import { VISIT_STATUSES, type Restaurant, type UserRecord, type VisitStatus } from "../domain/types";
+import { VISIT_STATUSES, type Restaurant, type RestaurantBranch, type UserRecord, type VisitStatus } from "../domain/types";
 
 type RestaurantDetailProps = {
   restaurant: Restaurant | undefined;
+  selectedBranch: RestaurantBranch | undefined;
+  selectedBranchId: string | undefined;
   userRecord: UserRecord;
   onClose: () => void;
+  onSelectBranch: (branchId: string) => void;
   onUpdateRecord: (patch: UserRecord) => void;
   onToggleStatus: (status: VisitStatus) => void;
 };
 
 export function RestaurantDetail({
   restaurant,
+  selectedBranch,
+  selectedBranchId,
   userRecord,
   onClose,
+  onSelectBranch,
   onUpdateRecord,
   onToggleStatus
 }: RestaurantDetailProps) {
@@ -58,7 +68,13 @@ export function RestaurantDetail({
   const category = getPrimaryCategory(restaurant);
   const heroImage = getHeroImage(restaurant);
   const reasons = buildRestaurantReasons(restaurant);
-  const qualityNeedsReview = needsReview(restaurant);
+  const branches = getRestaurantBranches(restaurant);
+  const activeBranch = selectedBranch || getBranchById(restaurant, selectedBranchId);
+  const qualityNeedsReview = needsReview(restaurant) || Boolean(activeBranch && activeBranch.confidence < 0.64);
+  const branchLabel = getBranchCountLabel(restaurant);
+  const branchPhone = activeBranch?.phone || restaurant.phone;
+  const branchWebsite = activeBranch?.website || restaurant.website;
+  const branchAddress = activeBranch?.address || restaurant.address;
 
   return (
     <aside className="detail-panel" aria-label={`${restaurant.displayName} details`}>
@@ -77,8 +93,31 @@ export function RestaurantDetail({
         <header className="detail-title">
           <span className="eyebrow">{restaurant.categories.join(" · ")}</span>
           <h2>{restaurant.displayName}</h2>
-          <p>{restaurant.cuisine || "Cuisine unavailable"} · {getArea(restaurant)} London</p>
+          <p>{[restaurant.cuisine || "Cuisine unavailable", branchLabel || `${getArea(restaurant)} London`].join(" · ")}</p>
         </header>
+
+        {branches.length > 1 ? (
+          <section className="branch-selector" aria-label={`${restaurant.displayName} London branches`}>
+            <div className="branch-selector-header">
+              <MapPin size={17} aria-hidden="true" />
+              <span>{branches.length} London branches</span>
+            </div>
+            <div className="branch-options">
+              {branches.map((branch) => (
+                <button
+                  key={branch.id}
+                  type="button"
+                  className={activeBranch?.id === branch.id ? "branch-option active" : "branch-option"}
+                  aria-pressed={activeBranch?.id === branch.id}
+                  onClick={() => onSelectBranch(branch.id)}
+                >
+                  <strong>{branch.displayName}</strong>
+                  <span>{branch.address || "Address needs review"}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="status-grid" aria-label="Your visit status">
           {VISIT_STATUSES.map((status) => (
@@ -120,13 +159,13 @@ export function RestaurantDetail({
           <div className="warning-card">
             <AlertTriangle size={17} aria-hidden="true" />
             <span>
-              {restaurant.detailWarning || "Coordinate or branch data needs manual review before treating this pin as final."}
+              {restaurant.verification?.issues[0] || restaurant.detailWarning || "Coordinate or branch data needs manual review before treating this pin as final."}
             </span>
           </div>
         ) : (
           <div className="quality-card">
             <ShieldCheck size={17} aria-hidden="true" />
-            <span>Mapped from a verified London address in the generated dataset.</span>
+            <span>{getBranchQualityLabel(restaurant, activeBranch)}</span>
           </div>
         )}
 
@@ -142,11 +181,11 @@ export function RestaurantDetail({
           <dl>
             <div>
               <dt>Address</dt>
-              <dd>{restaurant.address || "Needs location review"}</dd>
+              <dd>{branchAddress || "Needs location review"}</dd>
             </div>
             <div>
               <dt>Location Quality</dt>
-              <dd>{getLocationQualityLabel(restaurant)}</dd>
+              <dd>{getLocationQualityLabel(restaurant, activeBranch)}</dd>
             </div>
             {restaurant.chef ? (
               <div>
@@ -154,10 +193,10 @@ export function RestaurantDetail({
                 <dd>{restaurant.chef}</dd>
               </div>
             ) : null}
-            {restaurant.phone ? (
+            {branchPhone ? (
               <div>
                 <dt>Phone</dt>
-                <dd>{restaurant.phone}</dd>
+                <dd>{branchPhone}</dd>
               </div>
             ) : null}
           </dl>
@@ -194,7 +233,7 @@ export function RestaurantDetail({
         </section>
 
         <div className="action-row">
-          <a href={buildMapSearchUrl(restaurant)} target="_blank" rel="noreferrer">
+          <a href={activeBranch ? buildBranchMapSearchUrl(activeBranch, restaurant) : buildMapSearchUrl(restaurant)} target="_blank" rel="noreferrer">
             <Navigation size={15} aria-hidden="true" />
             Maps
           </a>
@@ -204,14 +243,14 @@ export function RestaurantDetail({
               OAD
             </a>
           ) : null}
-          {restaurant.website ? (
-            <a href={restaurant.website} target="_blank" rel="noreferrer">
+          {branchWebsite ? (
+            <a href={branchWebsite} target="_blank" rel="noreferrer">
               <Globe2 size={15} aria-hidden="true" />
               Website
             </a>
           ) : null}
-          {restaurant.phone ? (
-            <a href={`tel:${restaurant.phone.replace(/[^+\d]/g, "")}`}>
+          {branchPhone ? (
+            <a href={`tel:${branchPhone.replace(/[^+\d]/g, "")}`}>
               <Phone size={15} aria-hidden="true" />
               Call
             </a>
@@ -222,10 +261,32 @@ export function RestaurantDetail({
   );
 }
 
-function getLocationQualityLabel(restaurant: Restaurant): string {
+function getLocationQualityLabel(restaurant: Restaurant, branch: RestaurantBranch | undefined): string {
+  if (branch) {
+    if (branch.businessStatus === "CLOSED_PERMANENTLY") return "Closed on Google Places";
+    if (branch.businessStatus === "CLOSED_TEMPORARILY") return "Temporarily closed on Google Places";
+    if (branch.confidence >= 0.82) return "Verified branch";
+    if (branch.confidence >= 0.64) return "Likely branch";
+    return "Branch needs review";
+  }
+
   if (!hasCoordinate(restaurant)) return "Unmapped";
   if (restaurant.coordinateQuality === "verified-address") return "Verified OAD address";
   if (restaurant.coordinateQuality === "name-match-review") return "Name-match pin, review branch";
   if (restaurant.coordinateQuality === "missing") return "Unmapped";
   return "London name match";
+}
+
+function getBranchQualityLabel(restaurant: Restaurant, branch: RestaurantBranch | undefined): string {
+  if (restaurant.verification?.status === "verified" && restaurant.verification.checkedAt) {
+    return `Verified against source data on ${new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    }).format(new Date(restaurant.verification.checkedAt))}.`;
+  }
+
+  if (branch && branch.confidence >= 0.82) return "Mapped from a high-confidence verified London branch.";
+  if (branch && branch.confidence >= 0.64) return "Mapped from a likely London branch with source agreement.";
+  return "Mapped from a verified London address in the generated dataset.";
 }

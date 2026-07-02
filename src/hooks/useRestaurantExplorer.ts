@@ -5,7 +5,9 @@ import {
   buildCuisineOptions,
   createInitialFilters,
   filterRestaurants,
+  getBranchById,
   getExplorerStats,
+  getPrimaryBranch,
   getSavedRestaurants,
   hasCoordinate
 } from "../domain/restaurants";
@@ -15,13 +17,16 @@ import { useUserRecords } from "./useUserRecords";
 export function useRestaurantExplorer() {
   const [filters, setFilters] = useState<RestaurantFilters>(() => createInitialFilters());
   const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
   const { dataset, isLoading, error } = useRestaurantDataset();
   const { authError, authStatus, authUser, signInWithGoogle, signOut, userRecords, updateRecord, toggleStatus } = useUserRecords();
   const restaurants = dataset.restaurants;
 
   useEffect(() => {
     if (selectedId || !restaurants.length) return;
-    setSelectedId(restaurants.find(hasCoordinate)?.id ?? restaurants[0]?.id);
+    const initialRestaurant = restaurants.find(hasCoordinate) ?? restaurants[0];
+    setSelectedId(initialRestaurant?.id);
+    setSelectedBranchId(initialRestaurant ? getPrimaryBranch(initialRestaurant)?.id : undefined);
   }, [restaurants, selectedId]);
 
   const cuisineOptions = useMemo(() => buildCuisineOptions(restaurants), [restaurants]);
@@ -43,6 +48,20 @@ export function useRestaurantExplorer() {
   const selectedRestaurant = useMemo(
     () => restaurants.find((restaurant) => restaurant.id === selectedId),
     [restaurants, selectedId]
+  );
+
+  useEffect(() => {
+    if (!selectedRestaurant) return;
+    const primaryBranchId = getPrimaryBranch(selectedRestaurant)?.id;
+    const hasSelectedBranch = selectedBranchId
+      ? getBranchById(selectedRestaurant, selectedBranchId)?.id === selectedBranchId
+      : false;
+    if (!hasSelectedBranch && primaryBranchId) setSelectedBranchId(primaryBranchId);
+  }, [selectedBranchId, selectedRestaurant]);
+
+  const selectedBranch = useMemo(
+    () => (selectedRestaurant ? getBranchById(selectedRestaurant, selectedBranchId) : undefined),
+    [selectedBranchId, selectedRestaurant]
   );
   const selectedRecord = selectedRestaurant ? userRecords[selectedRestaurant.id] || {} : {};
 
@@ -137,8 +156,14 @@ export function useRestaurantExplorer() {
     toggleStatus(selectedRestaurant.id, status);
   }
 
-  function selectRestaurant(restaurantId: string) {
+  function selectRestaurant(restaurantId: string, branchId?: string) {
+    const restaurant = restaurants.find((candidate) => candidate.id === restaurantId);
     setSelectedId(restaurantId);
+    setSelectedBranchId(restaurant ? branchId || getPrimaryBranch(restaurant)?.id : branchId);
+  }
+
+  function selectBranch(branchId: string) {
+    setSelectedBranchId(branchId);
   }
 
   return {
@@ -154,8 +179,10 @@ export function useRestaurantExplorer() {
     mappedRestaurants,
     stats,
     selectedRestaurant,
+    selectedBranch,
     selectedRecord,
     selectedId,
+    selectedBranchId,
     userRecords,
     auth: {
       error: authError,
@@ -176,7 +203,11 @@ export function useRestaurantExplorer() {
     applyPreset,
     resetFilters,
     selectRestaurant,
-    closeRestaurant: () => setSelectedId(undefined),
+    selectBranch,
+    closeRestaurant: () => {
+      setSelectedId(undefined);
+      setSelectedBranchId(undefined);
+    },
     updateSelectedRecord,
     toggleSelectedStatus
   };

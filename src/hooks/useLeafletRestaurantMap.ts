@@ -1,7 +1,12 @@
 import { useEffect, type RefObject } from "react";
 import L, { type LayerGroup, type Map as LeafletMap } from "leaflet";
 import { categoryMeta, londonCenter } from "../domain/restaurantConfig";
-import { getBestRank, getPrimaryCategory, hasCoordinate } from "../domain/restaurants";
+import {
+  getBestRank,
+  getPrimaryCategory,
+  getRestaurantBranches,
+  hasBranchCoordinate
+} from "../domain/restaurants";
 import type { UserLocation } from "../domain/location";
 import type { Restaurant } from "../domain/types";
 
@@ -9,7 +14,8 @@ type UseLeafletRestaurantMapOptions = {
   mapNodeRef: RefObject<HTMLDivElement>;
   restaurants: Restaurant[];
   selectedId: string | undefined;
-  onSelect: (restaurantId: string) => void;
+  selectedBranchId?: string | undefined;
+  onSelect: (restaurantId: string, branchId?: string) => void;
   savedHighlightActive?: boolean;
   highlightedRestaurantIds?: string[];
   userLocation?: UserLocation | undefined;
@@ -20,6 +26,7 @@ export function useLeafletRestaurantMap({
   mapNodeRef,
   restaurants,
   selectedId,
+  selectedBranchId,
   onSelect,
   savedHighlightActive = false,
   highlightedRestaurantIds = [],
@@ -68,31 +75,38 @@ export function useLeafletRestaurantMap({
 
     const highlightedRestaurants = new Set(highlightedRestaurantIds);
     layer.clearLayers();
-    restaurants.filter(hasCoordinate).forEach((restaurant) => {
+    restaurants.forEach((restaurant) => {
       const category = getPrimaryCategory(restaurant);
       const shouldDimMarker = savedHighlightActive && !highlightedRestaurants.has(restaurant.id);
       const markerColor = shouldDimMarker ? "#94a3b8" : categoryMeta[category].color;
       const rank = getBestRank(restaurant);
       const rankLabel = rank < 9999 ? String(rank) : "";
-      const selectedClass = restaurant.id === selectedId ? " marker-selected" : "";
-      const dimmedClass = shouldDimMarker ? " marker-dimmed" : "";
-      const icon = L.divIcon({
-        className: `restaurant-marker${selectedClass}${dimmedClass}`,
-        html: `<span style="--marker-color:${markerColor}">${rankLabel}</span>`,
-        iconSize: [38, 38],
-        iconAnchor: [19, 19]
-      });
+      const branches = getRestaurantBranches(restaurant).filter(hasBranchCoordinate);
+      const branchCount = branches.length;
 
-      L.marker([restaurant.lat as number, restaurant.lng as number], {
-        icon,
-        keyboard: true,
-        title: restaurant.displayName
-      })
-        .on("click", () => onSelect(restaurant.id))
-        .bindTooltip(restaurant.displayName, { direction: "top", offset: [0, -15] })
-        .addTo(layer);
+      branches.forEach((branch) => {
+        const selectedClass = restaurant.id === selectedId && branch.id === selectedBranchId ? " marker-selected" : "";
+        const dimmedClass = shouldDimMarker ? " marker-dimmed" : "";
+        const branchClass = branchCount > 1 ? " marker-branch" : "";
+        const branchBadge = branchCount > 1 && branch.isPrimary ? `<b>${branchCount}</b>` : "";
+        const icon = L.divIcon({
+          className: `restaurant-marker${selectedClass}${dimmedClass}${branchClass}`,
+          html: `<span style="--marker-color:${markerColor}">${rankLabel}${branchBadge}</span>`,
+          iconSize: [38, 38],
+          iconAnchor: [19, 19]
+        });
+
+        L.marker([branch.lat as number, branch.lng as number], {
+          icon,
+          keyboard: true,
+          title: branch.displayName
+        })
+          .on("click", () => onSelect(restaurant.id, branch.id))
+          .bindTooltip(getTooltipLabel(restaurant, branch.displayName), { direction: "top", offset: [0, -15] })
+          .addTo(layer);
+      });
     });
-  }, [highlightedRestaurantIds, mapNodeRef, onSelect, restaurants, savedHighlightActive, selectedId]);
+  }, [highlightedRestaurantIds, mapNodeRef, onSelect, restaurants, savedHighlightActive, selectedBranchId, selectedId]);
 
   useEffect(() => {
     const userLayer = mapNodeRef.current?.__leafletUserLayer;
@@ -139,14 +153,21 @@ export function useLeafletRestaurantMap({
   useEffect(() => {
     const map = mapNodeRef.current?.__leafletMap;
     const selectedRestaurant = restaurants.find((restaurant) => restaurant.id === selectedId);
-    if (!map || !selectedRestaurant || !hasCoordinate(selectedRestaurant)) return;
+    const selectedBranch = selectedRestaurant
+      ? getRestaurantBranches(selectedRestaurant).find((branch) => branch.id === selectedBranchId)
+      : undefined;
+    if (!map || !selectedBranch || !hasBranchCoordinate(selectedBranch)) return;
 
     map.flyTo(
-      [selectedRestaurant.lat as number, selectedRestaurant.lng as number],
+      [selectedBranch.lat as number, selectedBranch.lng as number],
       Math.max(map.getZoom(), 14),
       { duration: 0.75 }
     );
-  }, [mapNodeRef, restaurants, selectedId]);
+  }, [mapNodeRef, restaurants, selectedBranchId, selectedId]);
+}
+
+function getTooltipLabel(restaurant: Restaurant, branchName: string) {
+  return branchName === restaurant.displayName ? restaurant.displayName : `${restaurant.displayName} · ${branchName}`;
 }
 
 declare global {

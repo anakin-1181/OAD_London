@@ -1,4 +1,15 @@
-import { CATEGORY_IDS, PRICE_TIERS, type CategoryId, type CountOption, type PriceTier, type Restaurant, type RestaurantFilters, type SortMode, type UserRecords } from "./types";
+import {
+  CATEGORY_IDS,
+  PRICE_TIERS,
+  type CategoryId,
+  type CountOption,
+  type PriceTier,
+  type Restaurant,
+  type RestaurantBranch,
+  type RestaurantFilters,
+  type SortMode,
+  type UserRecords
+} from "./types";
 
 export function createInitialFilters(): RestaurantFilters {
   return {
@@ -31,11 +42,21 @@ export function getPrimaryCategory(restaurant: Restaurant): CategoryId {
 }
 
 export function hasCoordinate(restaurant: Restaurant): boolean {
-  return typeof restaurant.lat === "number" && typeof restaurant.lng === "number";
+  return getRestaurantBranches(restaurant).some(hasBranchCoordinate);
+}
+
+export function hasBranchCoordinate(branch: RestaurantBranch): boolean {
+  return typeof branch.lat === "number" && typeof branch.lng === "number";
 }
 
 export function needsReview(restaurant: Restaurant): boolean {
-  return restaurant.needsManualReview === true || !hasCoordinate(restaurant) || Boolean(restaurant.detailWarning);
+  return (
+    restaurant.needsManualReview === true ||
+    !hasCoordinate(restaurant) ||
+    Boolean(restaurant.detailWarning) ||
+    restaurant.verification?.status === "needs-review" ||
+    Boolean(restaurant.verification?.issues.length)
+  );
 }
 
 export function priceValue(price: string): number {
@@ -52,7 +73,12 @@ export function getHeroImage(restaurant: Restaurant): string | null {
 }
 
 export function buildMapSearchUrl(restaurant: Restaurant): string {
-  const query = restaurant.address || `${restaurant.displayName}, London`;
+  return buildBranchMapSearchUrl(getPrimaryBranch(restaurant), restaurant);
+}
+
+export function buildBranchMapSearchUrl(branch: RestaurantBranch | undefined, restaurant: Restaurant): string {
+  if (branch?.googleMapsUri) return branch.googleMapsUri;
+  const query = branch?.address || restaurant.address || `${restaurant.displayName}, London`;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
@@ -63,6 +89,58 @@ export function isSaved(restaurant: Restaurant, userRecords: UserRecords): boole
 
 export function getSavedRestaurants(restaurants: Restaurant[], userRecords: UserRecords): Restaurant[] {
   return sortRestaurants(restaurants.filter((restaurant) => isSaved(restaurant, userRecords)), "rank");
+}
+
+export function getRestaurantBranches(restaurant: Restaurant): RestaurantBranch[] {
+  if (restaurant.branches?.length) {
+    return restaurant.branches.map((branch, index) => ({
+      ...branch,
+      restaurantId: branch.restaurantId || restaurant.id,
+      isPrimary: branch.isPrimary ?? index === 0
+    }));
+  }
+
+  return [
+    {
+      id: `${restaurant.id}:primary`,
+      restaurantId: restaurant.id,
+      displayName: restaurant.displayName,
+      address: restaurant.address,
+      lat: restaurant.lat,
+      lng: restaurant.lng,
+      phone: restaurant.phone,
+      website: restaurant.website,
+      googlePlaceId: null,
+      googleMapsUri: null,
+      businessStatus: null,
+      confidence: restaurant.locationQuality === "verified" ? 0.74 : 0.46,
+      isPrimary: true,
+      sources: [
+        { type: "oad", label: restaurant.address ? "OAD detail address" : "OAD list metadata", url: restaurant.oadUrl },
+        ...(restaurant.geocodeDisplayName ? [{ type: "nominatim" as const, label: "OpenStreetMap geocode" }] : [])
+      ]
+    }
+  ];
+}
+
+export function getPrimaryBranch(restaurant: Restaurant): RestaurantBranch | undefined {
+  const branches = getRestaurantBranches(restaurant);
+  return (
+    branches.find((branch) => branch.isPrimary && hasBranchCoordinate(branch)) ||
+    branches.find(hasBranchCoordinate) ||
+    branches[0]
+  );
+}
+
+export function getBranchById(restaurant: Restaurant, branchId: string | undefined): RestaurantBranch | undefined {
+  const branches = getRestaurantBranches(restaurant);
+  return branches.find((branch) => branch.id === branchId) || getPrimaryBranch(restaurant);
+}
+
+export function getBranchCountLabel(restaurant: Restaurant): string | null {
+  const branchCount = getRestaurantBranches(restaurant).filter(hasBranchCoordinate).length;
+  if (branchCount <= 1) return null;
+  return `${branchCount} London branches`;
 }
 
 export function cuisineMatches(restaurant: Restaurant, cuisine: string): boolean {
@@ -83,7 +161,13 @@ export function restaurantMatchesQuery(restaurant: Restaurant, query: string): b
     restaurant.cuisine,
     restaurant.address,
     getArea(restaurant),
-    restaurant.categories.join(" ")
+    restaurant.categories.join(" "),
+    ...getRestaurantBranches(restaurant).flatMap((branch) => [
+      branch.displayName,
+      branch.address,
+      branch.phone,
+      branch.website
+    ])
   ]
     .filter(Boolean)
     .some((value) => String(value).toLowerCase().includes(normalizedQuery));

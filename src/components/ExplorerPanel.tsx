@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { categoryMeta, sortLabels } from "../domain/restaurantConfig";
 import {
+  getBranchCountLabel,
   getArea,
   getBestRank,
   getHeroImage,
@@ -299,7 +300,7 @@ function RestaurantRow({
           <em>{restaurant.estimatedPrice}</em>
         </span>
         <small>
-          {restaurant.cuisine || "Cuisine unavailable"} · {getArea(restaurant)}
+          {[restaurant.cuisine || "Cuisine unavailable", getBranchCountLabel(restaurant) || getArea(restaurant)].join(" · ")}
         </small>
         <span className="row-badges">
           <span
