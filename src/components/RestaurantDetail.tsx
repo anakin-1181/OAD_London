@@ -263,8 +263,8 @@ export function RestaurantDetail({
 
 function getLocationQualityLabel(restaurant: Restaurant, branch: RestaurantBranch | undefined): string {
   if (branch) {
-    if (branch.businessStatus === "CLOSED_PERMANENTLY") return "Closed on Google Places";
-    if (branch.businessStatus === "CLOSED_TEMPORARILY") return "Temporarily closed on Google Places";
+    if (branch.businessStatus === "CLOSED_PERMANENTLY") return "Closed in source data";
+    if (branch.businessStatus === "CLOSED_TEMPORARILY") return "Temporarily closed in source data";
     if (branch.confidence >= 0.82) return "Verified branch";
     if (branch.confidence >= 0.64) return "Likely branch";
     return "Branch needs review";

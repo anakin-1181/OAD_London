@@ -14,8 +14,8 @@ jobs:
     name: Verify OAD London restaurants
     runs-on: ubuntu-latest
     env:
-      GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
-      VERIFY_WEBSITES: "0"
+      VERIFY_WEBSITES: "1"
+      NOMINATIM_THROTTLE_MS: "1200"
 
     steps:
       - name: Checkout
@@ -29,9 +29,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Check Google Places secret
-        run: node -e "if (!process.env.GOOGLE_PLACES_API_KEY) { throw new Error('Missing GOOGLE_PLACES_API_KEY repository secret') }"
 
       - name: Verify restaurant data
         run: npm run data:verify

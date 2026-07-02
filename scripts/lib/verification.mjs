@@ -136,8 +136,8 @@ export function createFallbackBranch(restaurant, checkedAt = null) {
     lng: typeof restaurant.lng === "number" ? restaurant.lng : null,
     phone: restaurant.phone || null,
     website: restaurant.website || null,
-    googlePlaceId: null,
-    googleMapsUri: null,
+    externalPlaceId: null,
+    mapUri: null,
     businessStatus: null,
     confidence: restaurant.locationQuality === "verified" ? 0.74 : 0.46,
     isPrimary: true,
@@ -157,12 +157,12 @@ export function createFallbackBranch(restaurant, checkedAt = null) {
 
 export function candidateToBranch(restaurant, candidate, checkedAt = null) {
   const match = scoreCandidate(restaurant, candidate);
-  const placeId = candidate.googlePlaceId || candidate.id || null;
+  const placeId = candidate.externalPlaceId || candidate.id || null;
   const lat = Number(candidate.lat ?? candidate.location?.latitude);
   const lng = Number(candidate.lng ?? candidate.location?.longitude);
 
   return {
-    id: placeId ? `${restaurant.id}:google:${placeId}` : `${restaurant.id}:candidate:${hashBranchKey(candidate)}`,
+    id: placeId ? `${restaurant.id}:source:${placeId}` : `${restaurant.id}:candidate:${hashBranchKey(candidate)}`,
     restaurantId: restaurant.id,
     displayName: candidate.displayName || candidate.name || restaurant.displayName,
     address: candidate.address || candidate.formattedAddress || null,
@@ -170,13 +170,16 @@ export function candidateToBranch(restaurant, candidate, checkedAt = null) {
     lng: Number.isFinite(lng) ? lng : null,
     phone: candidate.phone || candidate.internationalPhoneNumber || candidate.nationalPhoneNumber || null,
     website: candidate.website || candidate.websiteUri || restaurant.website || null,
-    googlePlaceId: placeId,
-    googleMapsUri: candidate.googleMapsUri || null,
+    externalPlaceId: placeId,
+    mapUri: candidate.mapUri || null,
     businessStatus: candidate.businessStatus || null,
     confidence: match.confidence,
     isPrimary: false,
     sources: [
-      { type: "google-places", label: "Google Places match", url: candidate.googleMapsUri || null, checkedAt },
+      ...(candidate.sourceType
+        ? [{ type: candidate.sourceType, label: candidate.sourceLabel || "Free source candidate", url: candidate.sourceUrl || null, checkedAt }]
+        : []),
+      ...(candidate.geocodedBy === "nominatim" ? [{ type: "nominatim", label: "OpenStreetMap geocode", checkedAt }] : []),
       ...(restaurant.website ? [{ type: "website", label: "Official website domain", url: restaurant.website, checkedAt }] : [])
     ],
     match
@@ -206,7 +209,7 @@ export function buildVerifiedBranches(restaurant, candidates = [], checkedAt = n
   const issues = [];
 
   if (!deduped.length && !restaurant.address) issues.push("No verified London branch candidate found.");
-  if (deduped.length && highConfidenceCount === 0) issues.push("Google Places candidates need manual review.");
+  if (deduped.length && highConfidenceCount === 0) issues.push("Free-source candidates need manual review.");
   if (closedCount) issues.push("One or more branch candidates are marked closed.");
   if (deduped.length > 1 && highConfidenceCount < 2) issues.push("Multiple possible branches were found with mixed confidence.");
 
@@ -256,7 +259,7 @@ function dedupeBranches(branches) {
 
   for (const branch of branches) {
     const duplicateIndex = deduped.findIndex((existing) => {
-      if (branch.googlePlaceId && existing.googlePlaceId === branch.googlePlaceId) return true;
+      if (branch.externalPlaceId && existing.externalPlaceId === branch.externalPlaceId) return true;
       if (extractPostcode(branch.address || "") && extractPostcode(branch.address || "") === extractPostcode(existing.address || "")) return true;
       return distanceMeters(branch, existing) <= 50;
     });

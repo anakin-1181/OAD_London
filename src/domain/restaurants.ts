@@ -77,7 +77,7 @@ export function buildMapSearchUrl(restaurant: Restaurant): string {
 }
 
 export function buildBranchMapSearchUrl(branch: RestaurantBranch | undefined, restaurant: Restaurant): string {
-  if (branch?.googleMapsUri) return branch.googleMapsUri;
+  if (branch?.mapUri) return branch.mapUri;
   const query = branch?.address || restaurant.address || `${restaurant.displayName}, London`;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
@@ -110,8 +110,8 @@ export function getRestaurantBranches(restaurant: Restaurant): RestaurantBranch[
       lng: restaurant.lng,
       phone: restaurant.phone,
       website: restaurant.website,
-      googlePlaceId: null,
-      googleMapsUri: null,
+      externalPlaceId: null,
+      mapUri: null,
       businessStatus: null,
       confidence: restaurant.locationQuality === "verified" ? 0.74 : 0.46,
       isPrimary: true,

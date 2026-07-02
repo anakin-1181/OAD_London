@@ -14,21 +14,11 @@ const dataPath = path.join(root, "public", "data", "oad-london-2026.json");
 const cacheDir = path.join(root, ".cache", "oad-verification");
 const reportsDir = path.join(root, "reports");
 const reportPath = path.join(reportsDir, "data-verification.md");
-const googlePlacesKey = process.env.GOOGLE_PLACES_API_KEY || "";
 const verifyLimit = Number(process.env.VERIFY_LIMIT || 0);
-const verifyWebsites = process.env.VERIFY_WEBSITES === "1";
+const verifyWebsites = process.env.VERIFY_WEBSITES !== "0";
+const nominatimThrottleMs = Number(process.env.NOMINATIM_THROTTLE_MS || 1100);
 const checkedAt = new Date().toISOString();
-const googleFieldMask = [
-  "places.id",
-  "places.displayName",
-  "places.formattedAddress",
-  "places.location",
-  "places.nationalPhoneNumber",
-  "places.internationalPhoneNumber",
-  "places.websiteUri",
-  "places.googleMapsUri",
-  "places.businessStatus"
-].join(",");
+let lastNominatimRequestAt = 0;
 
 function ensureDirs() {
   for (const dir of [cacheDir, reportsDir]) {
@@ -53,11 +43,10 @@ async function main() {
   const enrichedRestaurants = [];
 
   for (const [index, restaurant] of restaurants.entries()) {
-    const googleCandidates = googlePlacesKey ? await fetchGooglePlaceCandidates(restaurant) : [];
     const websiteCandidates = verifyWebsites ? await fetchWebsiteCandidates(restaurant) : [];
     const { branches, verification } = buildVerifiedBranches(
       restaurant,
-      [...googleCandidates, ...websiteCandidates],
+      websiteCandidates,
       checkedAt
     );
 
@@ -100,43 +89,6 @@ async function main() {
   console.log(`Wrote ${path.relative(root, reportPath)}`);
 }
 
-async function fetchGooglePlaceCandidates(restaurant) {
-  const query = `${restaurant.displayName} restaurant London`;
-  const cachePath = path.join(cacheDir, `google-${hash(query)}.json`);
-  if (existsSync(cachePath)) return normalizeGooglePlaces(readJson(cachePath));
-
-  const body = {
-    textQuery: query,
-    languageCode: "en",
-    regionCode: "GB",
-    locationBias: {
-      rectangle: {
-        low: { latitude: 51.28, longitude: -0.55 },
-        high: { latitude: 51.72, longitude: 0.33 }
-      }
-    }
-  };
-
-  const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": googlePlacesKey,
-      "X-Goog-FieldMask": googleFieldMask
-    },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Google Places lookup failed for ${restaurant.displayName}: ${response.status} ${text}`);
-  }
-
-  const payload = await response.json();
-  writeJson(cachePath, payload);
-  return normalizeGooglePlaces(payload);
-}
-
 async function fetchWebsiteCandidates(restaurant) {
   if (!restaurant.website) return [];
   const cachePath = path.join(cacheDir, `website-${hash(restaurant.website)}.html`);
@@ -159,21 +111,7 @@ async function fetchWebsiteCandidates(restaurant) {
     return [];
   }
 
-  return extractJsonLdCandidates(restaurant, html);
-}
-
-function normalizeGooglePlaces(payload) {
-  return (payload.places || []).map((place) => ({
-    id: place.id,
-    displayName: place.displayName?.text,
-    formattedAddress: place.formattedAddress,
-    lat: place.location?.latitude,
-    lng: place.location?.longitude,
-    phone: place.internationalPhoneNumber || place.nationalPhoneNumber || null,
-    websiteUri: place.websiteUri || null,
-    googleMapsUri: place.googleMapsUri || null,
-    businessStatus: place.businessStatus || null
-  }));
+  return geocodeMissingCandidates(extractJsonLdCandidates(restaurant, html));
 }
 
 function extractJsonLdCandidates(restaurant, html) {
@@ -187,18 +125,70 @@ function extractJsonLdCandidates(restaurant, html) {
       const address = formatJsonLdAddress(item.address);
       const geo = item.geo || {};
       candidates.push({
+        id: item["@id"] || item.url || null,
         displayName: item.name || restaurant.displayName,
         address,
         lat: Number(geo.latitude),
         lng: Number(geo.longitude),
         phone: item.telephone || null,
         website: item.url || restaurant.website,
+        sourceType: "website",
+        sourceLabel: "Official website structured data",
+        sourceUrl: item.url || restaurant.website,
         businessStatus: null
       });
     }
   }
 
   return candidates.filter((candidate) => candidate.address || Number.isFinite(candidate.lat));
+}
+
+async function geocodeMissingCandidates(candidates) {
+  const enriched = [];
+
+  for (const candidate of candidates) {
+    if (Number.isFinite(candidate.lat) && Number.isFinite(candidate.lng)) {
+      enriched.push(candidate);
+      continue;
+    }
+
+    if (!candidate.address) continue;
+    const result = await fetchNominatimCandidate(candidate.address);
+    if (!result) continue;
+    enriched.push({
+      ...candidate,
+      id: candidate.id || `osm-${result.place_id}`,
+      lat: Number(result.lat),
+      lng: Number(result.lon),
+      mapUri: `https://www.openstreetmap.org/?mlat=${result.lat}&mlon=${result.lon}#map=17/${result.lat}/${result.lon}`,
+      geocodedBy: "nominatim"
+    });
+  }
+
+  return enriched;
+}
+
+async function fetchNominatimCandidate(query) {
+  const cachePath = path.join(cacheDir, `nominatim-${hash(query)}.json`);
+  if (existsSync(cachePath)) {
+    const cached = readJson(cachePath);
+    return cached[0] || null;
+  }
+
+  const waitMs = Math.max(0, nominatimThrottleMs - (Date.now() - lastNominatimRequestAt));
+  if (waitMs) await delay(waitMs);
+  lastNominatimRequestAt = Date.now();
+
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&countrycodes=gb&q=${encodeURIComponent(query)}`;
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "OAD London Food Map free data verification (contact: repository owner)"
+    }
+  });
+  if (!response.ok) return null;
+  const results = await response.json();
+  writeJson(cachePath, results);
+  return results.find((result) => String(result.display_name || "").toLowerCase().includes("london")) || results[0] || null;
 }
 
 function flattenJsonLd(value) {
@@ -237,7 +227,7 @@ function buildMetadataVerification(summaries) {
 
   return {
     checkedAt,
-    sourceMode: googlePlacesKey ? "google-places" : "fallback",
+    sourceMode: "free-oad-websites-nominatim",
     websiteVerification: verifyWebsites,
     restaurantCount: summaries.length,
     branchCount,
@@ -247,11 +237,12 @@ function buildMetadataVerification(summaries) {
 }
 
 function mergeDataNotes(notes) {
-  const nextNote = googlePlacesKey
-    ? "Restaurant branch candidates are verified with Google Places in the server-side data pipeline when GOOGLE_PLACES_API_KEY is available."
-    : "Restaurant branch records fall back to OAD/Nominatim evidence until GOOGLE_PLACES_API_KEY is configured for the verification pipeline.";
+  const nextNote = "Restaurant branch records are verified with free sources only: OAD data, official website structured data, and OpenStreetMap/Nominatim geocoding.";
 
-  return [...notes.filter((note) => !note.includes("Restaurant branch candidates") && !note.includes("Restaurant branch records fall back")), nextNote];
+  return [
+    ...notes.filter((note) => !note.includes("Restaurant branch candidates") && !note.includes("Restaurant branch records")),
+    nextNote
+  ];
 }
 
 function buildReport(summaries) {
@@ -262,7 +253,7 @@ function buildReport(summaries) {
     "# OAD London Data Verification Report",
     "",
     `Generated: ${checkedAt}`,
-    `Source mode: ${googlePlacesKey ? "Google Places + fallback" : "Fallback only"}`,
+    "Source mode: Free sources only (OAD + official websites + OpenStreetMap/Nominatim)",
     `Website verification: ${verifyWebsites ? "enabled" : "disabled"}`,
     "",
     "## Summary",
@@ -289,6 +280,10 @@ function buildReport(summaries) {
 
 function hash(value) {
   return createHash("sha1").update(value).digest("hex");
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function describeCandidateDebug(restaurant, candidate) {

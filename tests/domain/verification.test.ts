@@ -48,24 +48,28 @@ describe("restaurant verification matching", () => {
       baseRestaurant,
       [
         {
-          id: "place-euston",
+          id: "website-euston",
           displayName: "Roti King",
           formattedAddress: "40 Doric Way, London NW1 1LH, UK",
           phone: "+44 20 7387 2518",
           websiteUri: "https://www.rotiking.co.uk/",
-          googleMapsUri: "https://maps.google.com/?cid=euston",
+          mapUri: "https://www.openstreetmap.org/?mlat=51.52881&mlon=-0.13272#map=17/51.52881/-0.13272",
           lat: 51.52881,
           lng: -0.13272,
+          sourceType: "website",
+          sourceLabel: "Official website structured data",
           businessStatus: "OPERATIONAL"
         },
         {
-          id: "place-battersea",
+          id: "website-battersea",
           displayName: "Roti King Battersea",
           formattedAddress: "Battersea Power Station, London SW11 8BJ, UK",
           websiteUri: "https://www.rotiking.co.uk/",
-          googleMapsUri: "https://maps.google.com/?cid=battersea",
+          mapUri: "https://www.openstreetmap.org/?mlat=51.4821&mlon=-0.1449#map=17/51.4821/-0.1449",
           lat: 51.4821,
           lng: -0.1449,
+          sourceType: "website",
+          sourceLabel: "Official website structured data",
           businessStatus: "OPERATIONAL"
         }
       ],
@@ -83,7 +87,7 @@ describe("restaurant verification matching", () => {
       baseRestaurant,
       [
         {
-          id: "closed-place",
+          id: "closed-website-branch",
           displayName: "Roti King",
           formattedAddress: "40 Doric Way, London NW1 1LH, UK",
           websiteUri: "https://www.rotiking.co.uk/",

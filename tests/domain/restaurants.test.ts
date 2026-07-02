@@ -155,7 +155,7 @@ describe("restaurant domain helpers", () => {
       displayName: "Hoppers",
       branches: [
         {
-          id: "hoppers:google:soho",
+          id: "hoppers:source:soho",
           restaurantId: "hoppers",
           displayName: "Hoppers Soho",
           address: "49 Frith Street, London W1D 4SG",
@@ -163,15 +163,15 @@ describe("restaurant domain helpers", () => {
           lng: -0.1322,
           phone: null,
           website: "https://www.hopperslondon.com/",
-          googlePlaceId: "soho",
-          googleMapsUri: "https://maps.google.com/?cid=soho",
+          externalPlaceId: "soho",
+          mapUri: "https://www.openstreetmap.org/?mlat=51.5139&mlon=-0.1322#map=17/51.5139/-0.1322",
           businessStatus: "OPERATIONAL",
           confidence: 0.9,
           isPrimary: true,
-          sources: [{ type: "google-places", label: "Google Places match" }]
+          sources: [{ type: "website", label: "Official website structured data" }]
         },
         {
-          id: "hoppers:google:kings-cross",
+          id: "hoppers:source:kings-cross",
           restaurantId: "hoppers",
           displayName: "Hoppers King's Cross",
           address: "Pancras Square, London N1C 4AG",
@@ -179,11 +179,11 @@ describe("restaurant domain helpers", () => {
           lng: -0.1253,
           phone: null,
           website: "https://www.hopperslondon.com/",
-          googlePlaceId: "kings-cross",
-          googleMapsUri: "https://maps.google.com/?cid=kings-cross",
+          externalPlaceId: "kings-cross",
+          mapUri: "https://www.openstreetmap.org/?mlat=51.5321&mlon=-0.1253#map=17/51.5321/-0.1253",
           businessStatus: "OPERATIONAL",
           confidence: 0.84,
-          sources: [{ type: "google-places", label: "Google Places match" }]
+          sources: [{ type: "website", label: "Official website structured data" }]
         }
       ]
     });

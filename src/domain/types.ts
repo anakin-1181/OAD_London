@@ -19,7 +19,7 @@ export type ListEntry = {
   sourceUrl: string;
 };
 
-export type VerificationSourceType = "oad" | "website" | "google-places" | "nominatim" | "manual";
+export type VerificationSourceType = "oad" | "website" | "nominatim" | "manual";
 export type VerificationStatus = "verified" | "needs-review" | "unverified";
 
 export type VerificationSource = {
@@ -38,8 +38,8 @@ export type RestaurantBranch = {
   lng: number | null;
   phone: string | null;
   website: string | null;
-  googlePlaceId: string | null;
-  googleMapsUri: string | null;
+  externalPlaceId: string | null;
+  mapUri: string | null;
   businessStatus: "OPERATIONAL" | "CLOSED_TEMPORARILY" | "CLOSED_PERMANENTLY" | "UNKNOWN" | string | null;
   confidence: number;
   sources: VerificationSource[];
