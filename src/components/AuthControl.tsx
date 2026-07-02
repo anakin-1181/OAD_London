@@ -19,7 +19,7 @@ export function AuthControl({
   variant = "desktop"
 }: AuthControlProps) {
   const isSignedIn = Boolean(user);
-  const isDisabled = status === "loading" || status === "syncing" || (!isSignedIn && status === "unconfigured");
+  const isDisabled = status === "loading" || status === "syncing";
   const className = [
     "auth-control",
     `auth-control-${variant}`,
@@ -30,7 +30,7 @@ export function AuthControl({
     .join(" ");
   const label = isSignedIn ? getDisplayName(user) : "Sign in with Google";
   const helper = getAuthHelper(status, isSignedIn, error);
-  const title = status === "unconfigured" ? "Add Supabase environment variables to enable Google sync." : helper;
+  const title = status === "unconfigured" ? "Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel, then redeploy." : helper;
 
   return (
     <button
@@ -62,7 +62,7 @@ function getDisplayName(user: AuthUserProfile | undefined) {
 }
 
 function getAuthHelper(status: AuthSyncStatus, isSignedIn: boolean, error: string | undefined) {
-  if (status === "unconfigured") return "Sync setup needed";
+  if (status === "unconfigured") return error || "Sync setup needed";
   if (status === "loading") return "Checking session";
   if (status === "syncing") return "Syncing saves";
   if (status === "error") return error || "Sync issue";
