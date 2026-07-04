@@ -1,142 +1,217 @@
-# OAD London Food Map
-
 <p align="center">
-  <img src="public/icons/oad-list-logo.png" alt="OAD London Food Map logo" width="96" />
+  <img src="public/icons/oad-list-logo.png" alt="OAD London Food Map logo" width="104" />
 </p>
 
-<h3 align="center">Find the right London restaurant faster.</h3>
+<h1 align="center">OAD London Food Map</h1>
 
 <p align="center">
-  A practical, map-first guide to London restaurants featured in the OAD Europe 2026 lists.
-  Search by mood, area, cuisine, price, rank, and your own shortlist.
+  <strong>A polished, map-first guide for choosing where to eat in London.</strong>
+  <br />
+  Explore OAD Europe 2026 restaurants by rank, mood, area, cuisine, price, branch, and your own shortlist.
 </p>
 
 <p align="center">
-  <strong>314 restaurants</strong> · <strong>4 OAD lists</strong> · <strong>Map-first planning</strong> · <strong>Saved notes</strong>
+  <img alt="OAD Europe 2026" src="https://img.shields.io/badge/OAD%20Europe-2026-ea580c?style=for-the-badge" />
+  <img alt="314 London restaurants" src="https://img.shields.io/badge/314-London%20restaurants-0f172a?style=for-the-badge" />
+  <img alt="4 guide lists" src="https://img.shields.io/badge/4-Guide%20lists-2563eb?style=for-the-badge" />
+  <img alt="Map first" src="https://img.shields.io/badge/Map--first-Planning-168256?style=for-the-badge" />
+</p>
+
+<p align="center">
+  <a href="#start-here"><strong>Start Here</strong></a>
+  ·
+  <a href="#guide"><strong>User Guide</strong></a>
+  ·
+  <a href="#features"><strong>Features</strong></a>
+  ·
+  <a href="#tips"><strong>Tips</strong></a>
+  ·
+  <a href="#good-to-know"><strong>Good To Know</strong></a>
 </p>
 
 ---
 
-## Why Use It
+## The Short Version
 
-OAD London Food Map helps you move from "Where should we eat?" to a confident shortlist in minutes.
+OAD London Food Map turns the OAD Europe 2026 London selections into a fast, visual planning tool. Instead of reading a long list and then opening maps separately, you can compare quality, location, mood, price, and personal notes in one place.
 
-Instead of scrolling through long restaurant lists, you can see London's OAD-recognised restaurants on a map, filter them by the kind of meal you want, inspect useful details, and keep track of places you want to try.
-
-| What you need | How the map helps |
-| --- | --- |
-| A special dinner | Start with Destination for top-ranked and classical picks. |
-| Something casual but still excellent | Use Casual Gems for lower-lift, high-quality options. |
-| A more affordable meal | Try Value Hunt for cheaper OAD-estimated picks. |
-| A personal food list | Save restaurants as Want, Booked, Visited, or Loved. |
-| A quick reality check | Look for location quality and review warnings before travelling. |
+<table>
+  <tr>
+    <td><strong>Best for</strong></td>
+    <td>Finding a serious London meal without losing half an hour to tabs and group chat debate.</td>
+  </tr>
+  <tr>
+    <td><strong>Core idea</strong></td>
+    <td>Use curated OAD recognition as the starting point, then make the final choice by map, filters, and personal context.</td>
+  </tr>
+  <tr>
+    <td><strong>Not for</strong></td>
+    <td>Booking directly. The guide helps you decide, then points you to maps, restaurant sites, OAD pages, or phone links.</td>
+  </tr>
+</table>
 
 ## Start Here
 
-1. Open the map from the project website link.
-2. Pick a discovery preset: Destination, Casual Gems, Value Hunt, or Saved.
-3. Refine by cuisine, London area, price estimate, or search.
-4. Select a restaurant from the list or tap a map pin.
-5. Check the details, branch options, rankings, links, and location quality.
-6. Mark the place as Want, Booked, Visited, or Loved, then add any notes you want to remember.
+| Step | What to do | Why it helps |
+| --- | --- | --- |
+| 1 | Open the deployed map link from the repository or project page. | Start with the real map, not a static list. |
+| 2 | Choose <kbd>Destination</kbd>, <kbd>Casual Gems</kbd>, <kbd>Value Hunt</kbd>, or <kbd>Saved</kbd>. | Presets get you close quickly. |
+| 3 | Refine by cuisine, London area, price estimate, guide list, or search. | Reduce noise without losing good options. |
+| 4 | Select a restaurant from the list or a map pin. | Compare the place and its location together. |
+| 5 | Check ranks, branches, links, notes, and review warnings. | Avoid weak data and wrong-branch surprises. |
+| 6 | Save it as <kbd>Want</kbd>, <kbd>Booked</kbd>, <kbd>Visited</kbd>, or <kbd>Loved</kbd>. | Build a personal London food shortlist. |
 
-## User Guide
+## Guide
 
-### 1. Explore The Map
+### Explore By Mood
 
-The map shows London restaurants from the OAD Europe 2026 guide. Pins are grouped by list type, and restaurants with multiple London branches can show more than one location under the same restaurant.
+<table>
+  <tr>
+    <th>Preset</th>
+    <th>Use it when</th>
+    <th>Typical result</th>
+  </tr>
+  <tr>
+    <td><kbd>Destination</kbd></td>
+    <td>You want a special meal or a high-confidence booking.</td>
+    <td>Top-ranked and classical restaurants.</td>
+  </tr>
+  <tr>
+    <td><kbd>Casual Gems</kbd></td>
+    <td>You want something easier, relaxed, but still worth seeking out.</td>
+    <td>Casual and value-led OAD picks.</td>
+  </tr>
+  <tr>
+    <td><kbd>Value Hunt</kbd></td>
+    <td>You care about price, convenience, or repeatable meals.</td>
+    <td>Lower price estimates sorted for practical planning.</td>
+  </tr>
+  <tr>
+    <td><kbd>Saved</kbd></td>
+    <td>You already have contenders and want to choose from them.</td>
+    <td>Your personal shortlist.</td>
+  </tr>
+</table>
 
-Use the map when location matters: comparing neighbourhoods, checking whether a restaurant fits your day, or choosing somewhere near where you already plan to be.
+### Refine The List
 
-### 2. Use Presets First
+Use filters when you know what kind of meal you want:
 
-Presets are the fastest way to start:
+| Filter | Helps you answer |
+| --- | --- |
+| Search | "Do I already have a place, chef, cuisine, or area in mind?" |
+| Guide list | "Do I want Top Restaurants, Casual, Classical, or Cheap Eats?" |
+| Price estimate | "Is this the right level for today?" |
+| Cuisine | "What style of cooking do we feel like?" |
+| Area | "What is nearby or realistic to reach?" |
+| Sort | "Should I prioritise rank, name, guide type, or price?" |
 
-- **Destination**: top tables and classic restaurants for a more planned meal.
-- **Casual Gems**: relaxed restaurants that still feel worth seeking out.
-- **Value Hunt**: cheaper picks based on the guide's estimated price level.
-- **Saved**: your own shortlist of places with a status or note.
+### Read The Restaurant View
 
-After choosing a preset, add one or two filters. This usually works better than over-filtering too early.
+Each restaurant page is designed for decisions, not clutter.
 
-### 3. Refine Your Options
+| Section | What to look for |
+| --- | --- |
+| OAD rankings | Which guide lists include the restaurant and where it ranks. |
+| Branch selector | Multiple London locations under the same restaurant, where available. |
+| Why it might fit | Short reasons based on list, cuisine, price, and location. |
+| Location quality | Confidence cues and review warnings before you travel. |
+| Details | Address, chef, phone, website, hours, and useful links when available. |
+| Your notes | Dishes, booking context, recommendations, or who to bring. |
 
-You can narrow the list by:
+## Features
 
-- **Search**: restaurant name, chef, cuisine, area, address, or branch.
-- **Guide list**: Top Restaurants, Casual, Classical, or Cheap Eats.
-- **Price estimate**: from £ to ££££.
-- **Cuisine**: the style of cooking listed for each restaurant.
-- **Area**: broad London area from the OAD location data.
-- **Sort order**: best OAD rank, name, guide list, or price.
-
-The matching list and map pins update together, so you can compare quality and location at the same time.
-
-### 4. Read A Restaurant Page
-
-Each restaurant detail view is designed for quick decisions. You can check:
-
-- OAD list membership and ranking.
-- Cuisine, price estimate, chef, address, phone, website, and opening hours when available.
-- Branch selector for restaurants with multiple London locations.
-- Why the restaurant may fit your current search.
-- Maps, OAD, website, and call links.
-- Location quality and review warnings.
-
-### 5. Save And Plan
-
-Use the visit buttons to build your personal guide:
-
-- **Want**: places to consider.
-- **Booked**: meals already planned.
-- **Visited**: places you have tried.
-- **Loved**: favourites worth remembering.
-
-Adding a note also saves the restaurant. Notes are useful for dishes to try, booking reminders, who recommended it, or who you want to go with.
-
-Guest saves stay in your browser. If Google sign-in is available, signing in lets your shortlist and notes sync more reliably across sessions.
-
-### 6. Use Location Carefully
-
-The locate button can centre the map on your current position if your browser allows it. Your location is only used to show your position on the map and is not saved by the app.
-
-Some restaurants are marked for review when the available source data is incomplete, uncertain, unmapped, or branch-sensitive. Treat those warnings as a prompt to double-check before crossing London for a meal.
+<table>
+  <tr>
+    <td width="50%">
+      <h3>Map-first discovery</h3>
+      <p>See OAD-recognised restaurants across London and compare them spatially before committing.</p>
+    </td>
+    <td width="50%">
+      <h3>Decision-friendly filters</h3>
+      <p>Filter by list, price, cuisine, area, search, saved status, and review flags.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>Personal shortlist</h3>
+      <p>Mark places as <kbd>Want</kbd>, <kbd>Booked</kbd>, <kbd>Visited</kbd>, or <kbd>Loved</kbd>, and keep notes.</p>
+    </td>
+    <td width="50%">
+      <h3>Branch-aware planning</h3>
+      <p>Restaurants with several London locations can show branch options instead of forcing one generic pin.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>Quality signals</h3>
+      <p>Uncertain, unmapped, or branch-sensitive records are visible so you know when to double-check.</p>
+    </td>
+    <td width="50%">
+      <h3>Mobile-friendly use</h3>
+      <p>Designed for quick planning on the move, including saved places and optional location centring.</p>
+    </td>
+  </tr>
+</table>
 
 ## What's Inside
 
-- **314 London restaurants** from OAD Europe 2026.
-- **Top Restaurants, Casual, Classical, and Cheap Eats** list coverage.
-- **Rank, cuisine, chef, area, price estimate, descriptions, images, links, and hours** where available.
-- **Branch-aware mapping** for restaurants with more than one London location.
-- **Data quality signals** so uncertain pins are visible instead of hidden.
+| Coverage | Detail |
+| --- | --- |
+| Restaurants | 314 London restaurants from OAD Europe 2026. |
+| Lists | Top Restaurants, Casual, Classical, and Cheap Eats. |
+| Useful fields | Rank, cuisine, chef, area, estimated price, descriptions, images, links, and hours where available. |
+| Mapping | Branch-aware pins and location quality cues. |
+| Personal planning | Saved statuses, notes, and shortlist mode. |
 
-## Best For
+## Who It Helps
 
-- Visitors choosing a small number of London meals.
-- Locals keeping a serious "next places to try" list.
-- Friends deciding on dinner without endless group chat loops.
-- Food-focused travellers who want curation before random search results.
-- Anyone who wants to balance reputation, location, budget, and mood quickly.
+<table>
+  <tr>
+    <td><strong>Visitors</strong></td>
+    <td>Choose a small number of London meals with better confidence.</td>
+  </tr>
+  <tr>
+    <td><strong>Locals</strong></td>
+    <td>Build a serious "next places to try" list across neighbourhoods.</td>
+  </tr>
+  <tr>
+    <td><strong>Groups</strong></td>
+    <td>Reduce vague dinner debates by filtering around real constraints.</td>
+  </tr>
+  <tr>
+    <td><strong>Food-focused travellers</strong></td>
+    <td>Start from curated recognition instead of generic search results.</td>
+  </tr>
+</table>
 
 ## Tips
 
-- Start with a preset, then filter by area or cuisine.
-- Use price estimates as a planning signal, not a final bill prediction.
-- Open branch options before navigating to multi-location restaurants.
-- Add notes immediately, while you still remember why a place caught your eye.
-- Use Saved mode when you are ready to choose from serious contenders.
+> Start broad, then narrow. Pick one preset first, then add only the filters that matter for the meal you are actually planning.
+
+- Use <kbd>Destination</kbd> when the meal is the event.
+- Use <kbd>Casual Gems</kbd> when you want quality without too much ceremony.
+- Use <kbd>Value Hunt</kbd> when price and convenience matter.
+- Use <kbd>Saved</kbd> once you have a serious shortlist.
+- Treat price estimates as planning signals, not bill predictions.
+- Check branch options before navigating to multi-location restaurants.
+- Add notes immediately so future-you remembers why a place mattered.
 
 ## Good To Know
 
-This is a discovery and planning guide, not a booking platform. It helps you decide where to go, then points you toward maps, OAD pages, restaurant websites, or phone links where available.
+> This guide helps you choose. It does not replace the restaurant's own booking page, opening hours, menus, or availability.
 
-Restaurant information can change. Always confirm opening hours, availability, menus, and bookings directly with the restaurant before making plans.
+Restaurant information can change. Always confirm hours, menus, location, availability, and booking details directly with the restaurant before making plans.
+
+Guest saves stay in your browser. If Google sign-in is available, signing in lets your shortlist and notes sync more reliably across sessions.
+
+The location button only centres the map on your current position if your browser allows it. Your position is not saved by the app.
 
 ## Feedback
 
 Found a great meal through the map? Share it with someone planning food in London.
 
-Spotted something that looks wrong? Open an issue with the restaurant name, what you noticed, and any useful source link so the guide can be improved.
+Spotted something wrong? Open an issue with the restaurant name, what you noticed, and any useful source link so the guide can be improved.
 
 ## License
 
