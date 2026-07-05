@@ -10,6 +10,7 @@ import {
   getExplorerStats,
   getPrimaryCategory,
   getRestaurantBranches,
+  getRestaurantPresentation,
   getSavedRestaurants,
   needsReview
 } from "../../src/domain/restaurants";
@@ -147,6 +148,36 @@ describe("restaurant domain helpers", () => {
     });
 
     expect(saved.map((restaurant) => restaurant.id)).toEqual(["status", "note"]);
+  });
+
+  it("prepares reusable presentation metadata for rendering and filtering", () => {
+    const restaurant = makeRestaurant({
+      id: "kiln",
+      displayName: "Kiln",
+      chef: "Ben Chapman",
+      cuisine: "Thai",
+      regionName: "London,Soho",
+      photos: ["https://example.com/kiln.jpg"],
+      listEntries: [{ ...baseRestaurant.listEntries[0], rank: 22 }]
+    });
+
+    const presentation = getRestaurantPresentation(restaurant);
+
+    expect(presentation).toBe(getRestaurantPresentation(restaurant));
+    expect(presentation).toMatchObject({
+      area: "Soho",
+      bestRank: 22,
+      branchCount: 1,
+      branchCountLabel: null,
+      hasCoordinate: true,
+      heroImage: "https://example.com/kiln.jpg",
+      needsReview: false,
+      primaryCategory: "top",
+      rankLabel: "#22"
+    });
+    expect(presentation.searchText).toContain("kiln");
+    expect(presentation.searchText).toContain("ben chapman");
+    expect(presentation.searchText).toContain("soho");
   });
 
   it("keeps branch pins grouped under a parent restaurant record", () => {

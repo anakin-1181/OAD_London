@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { MapPinned, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { AuthControl } from "./components/AuthControl";
 import { ExplorerPanel } from "./components/ExplorerPanel";
@@ -24,16 +24,44 @@ function App() {
   ]
     .filter(Boolean)
     .join(" ");
-  const explorerWithSelection = {
-    ...explorer,
-    selectRestaurant: handleSelectRestaurant
-  };
+  const { selectRestaurant } = explorer;
 
-  function handleSelectRestaurant(restaurantId: string, branchId?: string) {
-    explorer.selectRestaurant(restaurantId, branchId);
+  const handleSelectRestaurant = useCallback((restaurantId: string, branchId?: string) => {
+    selectRestaurant(restaurantId, branchId);
     setIsSavedListOpen(false);
     setIsDetailOpen(true);
-  }
+  }, [selectRestaurant]);
+
+  const explorerWithSelection = useMemo(
+    () => ({
+      ...explorer,
+      selectRestaurant: handleSelectRestaurant
+    }),
+    [explorer, handleSelectRestaurant]
+  );
+
+  const handleToggleExplorer = useCallback(() => {
+    setIsSavedListOpen(false);
+    setIsExplorerOpen((isOpen) => !isOpen);
+  }, []);
+
+  const handleToggleDetail = useCallback(() => {
+    setIsSavedListOpen(false);
+    setIsDetailOpen((isOpen) => !isOpen);
+  }, []);
+
+  const handleToggleSavedList = useCallback(() => {
+    setIsSavedListOpen((isOpen) => !isOpen);
+  }, []);
+
+  const handleCloseSavedList = useCallback(() => {
+    setIsSavedListOpen(false);
+  }, []);
+
+  const handleToggleSavedHighlight = useCallback(() => {
+    setIsSavedListOpen(false);
+    setIsSavedHighlightActive((isActive) => !isActive);
+  }, []);
 
   return (
     <main className={shellClassName}>
@@ -51,12 +79,9 @@ function App() {
           savedListOpen={isSavedListOpen}
           savedHighlightActive={isSavedHighlightActive}
           onSelect={handleSelectRestaurant}
-          onToggleSavedList={() => setIsSavedListOpen((isOpen) => !isOpen)}
-          onCloseSavedList={() => setIsSavedListOpen(false)}
-          onToggleSavedHighlight={() => {
-            setIsSavedListOpen(false);
-            setIsSavedHighlightActive((isActive) => !isActive);
-          }}
+          onToggleSavedList={handleToggleSavedList}
+          onCloseSavedList={handleCloseSavedList}
+          onToggleSavedHighlight={handleToggleSavedHighlight}
         />
       </Suspense>
       <header className="mobile-site-banner" aria-label="OAD London Food Map">
@@ -84,10 +109,7 @@ function App() {
         <button
           type="button"
           className="panel-toggle left"
-          onClick={() => {
-            setIsSavedListOpen(false);
-            setIsExplorerOpen((isOpen) => !isOpen);
-          }}
+          onClick={handleToggleExplorer}
           aria-label={isExplorerOpen ? "Hide search and filters panel" : "Show search and filters panel"}
           aria-pressed={isExplorerOpen}
           title={isExplorerOpen ? "Hide filters" : "Show filters"}
@@ -98,10 +120,7 @@ function App() {
         <button
           type="button"
           className="panel-toggle right"
-          onClick={() => {
-            setIsSavedListOpen(false);
-            setIsDetailOpen((isOpen) => !isOpen);
-          }}
+          onClick={handleToggleDetail}
           aria-label={isDetailOpen ? "Hide restaurant details panel" : "Show restaurant details panel"}
           aria-pressed={isDetailOpen}
           title={isDetailOpen ? "Hide details" : "Show details"}

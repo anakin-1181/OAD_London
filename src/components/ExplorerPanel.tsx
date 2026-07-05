@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import {
   AlertTriangle,
   Compass,
@@ -15,13 +15,8 @@ import {
 } from "lucide-react";
 import { categoryMeta, sortLabels } from "../domain/restaurantConfig";
 import {
-  getBranchCountLabel,
-  getArea,
-  getBestRank,
-  getHeroImage,
-  getPrimaryCategory,
-  isSaved,
-  needsReview
+  getRestaurantPresentation,
+  isSaved
 } from "../domain/restaurants";
 import { CATEGORY_IDS, PRICE_TIERS, type DiscoveryPreset, type PriceTier, type Restaurant } from "../domain/types";
 import type { RestaurantExplorer } from "../hooks/useRestaurantExplorer";
@@ -269,7 +264,7 @@ function Metric({ value, label }: { value: number | string; label: string }) {
   );
 }
 
-function RestaurantRow({
+const RestaurantRow = memo(function RestaurantRow({
   restaurant,
   selected,
   saved,
@@ -280,9 +275,10 @@ function RestaurantRow({
   saved: boolean;
   onSelect: (restaurantId: string) => void;
 }) {
-  const category = getPrimaryCategory(restaurant);
-  const image = getHeroImage(restaurant);
-  const bestRank = getBestRank(restaurant);
+  const presentation = getRestaurantPresentation(restaurant);
+  const category = presentation.primaryCategory;
+  const image = presentation.heroImage;
+  const bestRank = presentation.bestRank;
 
   return (
     <button
@@ -292,7 +288,7 @@ function RestaurantRow({
       aria-pressed={selected}
     >
       <span className="row-media">
-        {image ? <img src={image} alt="" loading="lazy" /> : <span>{restaurant.displayName.slice(0, 1)}</span>}
+        {image ? <img src={image} alt="" loading="lazy" decoding="async" width="58" height="58" /> : <span>{restaurant.displayName.slice(0, 1)}</span>}
       </span>
       <span className="row-main">
         <span className="row-title">
@@ -300,7 +296,7 @@ function RestaurantRow({
           <em>{restaurant.estimatedPrice}</em>
         </span>
         <small>
-          {[restaurant.cuisine || "Cuisine unavailable", getBranchCountLabel(restaurant) || getArea(restaurant)].join(" · ")}
+          {[restaurant.cuisine || "Cuisine unavailable", presentation.branchCountLabel || presentation.area].join(" · ")}
         </small>
         <span className="row-badges">
           <span
@@ -319,8 +315,8 @@ function RestaurantRow({
       </span>
       <span className="row-flags" aria-hidden="true">
         {saved ? <Star size={16} /> : null}
-        {needsReview(restaurant) ? <AlertTriangle size={16} /> : null}
+        {presentation.needsReview ? <AlertTriangle size={16} /> : null}
       </span>
     </button>
   );
-}
+});

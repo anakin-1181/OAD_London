@@ -142,7 +142,7 @@ export function useUserRecords() {
     }
   }, []);
 
-  function updateRecord(restaurantId: string, patch: UserRecord) {
+  const updateRecord = useCallback((restaurantId: string, patch: UserRecord) => {
     const next = applyUserRecordPatch(userRecordsRef.current, restaurantId, patch);
     userRecordsRef.current = next;
     setUserRecords(next);
@@ -150,14 +150,14 @@ export function useUserRecords() {
     if (authUser) {
       void persistCloudRecord(restaurantId, next[restaurantId], authUser.id);
     }
-  }
+  }, [authUser, persistCloudRecord]);
 
-  function toggleStatus(restaurantId: string, status: VisitStatus) {
+  const toggleStatus = useCallback((restaurantId: string, status: VisitStatus) => {
     const currentStatus = userRecordsRef.current[restaurantId]?.status;
     updateRecord(restaurantId, { status: currentStatus === status ? undefined : status });
-  }
+  }, [updateRecord]);
 
-  async function signInWithGoogle() {
+  const signInWithGoogle = useCallback(async () => {
     if (!supabase) {
       setAuthStatus("unconfigured");
       setAuthError("Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable Google sync.");
@@ -186,9 +186,9 @@ export function useUserRecords() {
       setAuthStatus(authUser ? "synced" : "guest");
       setAuthError(error.message);
     }
-  }
+  }, [authUser]);
 
-  async function signOut() {
+  const signOut = useCallback(async () => {
     if (!supabase) {
       setAuthUser(undefined);
       setAuthStatus("unconfigured");
@@ -210,7 +210,7 @@ export function useUserRecords() {
     const localRecords = loadUserRecordsFromStorage(getBrowserStorage());
     userRecordsRef.current = localRecords;
     setUserRecords(localRecords);
-  }
+  }, [authUser]);
 
   return {
     userRecords,

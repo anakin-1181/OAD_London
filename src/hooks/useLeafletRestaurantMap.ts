@@ -1,5 +1,5 @@
-import { useEffect, type RefObject } from "react";
-import L, { type LayerGroup, type Map as LeafletMap } from "leaflet";
+import { useEffect, useRef, type RefObject } from "react";
+import L, { type LayerGroup, type Map as LeafletMap, type Marker } from "leaflet";
 import { categoryMeta, londonCenter } from "../domain/restaurantConfig";
 import {
   getBestRank,
@@ -33,6 +33,11 @@ export function useLeafletRestaurantMap({
   userLocation,
   userLocationFocusKey = 0
 }: UseLeafletRestaurantMapOptions) {
+  const markerEntriesRef = useRef<Map<string, MarkerEntry>>(new Map());
+  const lastSelectionFlyToRef = useRef<string | undefined>();
+  const selectedBranchIdRef = useRef<string | undefined>(selectedBranchId);
+  const selectedIdRef = useRef<string | undefined>(selectedId);
+
   useEffect(() => {
     const mapNode = mapNodeRef.current;
     if (!mapNode || mapNode.dataset.ready === "true") return;
@@ -59,8 +64,10 @@ export function useLeafletRestaurantMap({
     mapNode.__leafletMap = map;
     mapNode.__leafletLayer = layer;
     mapNode.__leafletUserLayer = userLayer;
+    const markerEntries = markerEntriesRef.current;
 
     return () => {
+      markerEntries.clear();
       map.remove();
       delete mapNode.dataset.ready;
       delete mapNode.__leafletMap;
@@ -74,6 +81,7 @@ export function useLeafletRestaurantMap({
     if (!layer) return;
 
     const highlightedRestaurants = new Set(highlightedRestaurantIds);
+    markerEntriesRef.current.clear();
     layer.clearLayers();
     restaurants.forEach((restaurant) => {
       const category = getPrimaryCategory(restaurant);
@@ -85,18 +93,17 @@ export function useLeafletRestaurantMap({
       const branchCount = branches.length;
 
       branches.forEach((branch) => {
-        const selectedClass = restaurant.id === selectedId && branch.id === selectedBranchId ? " marker-selected" : "";
         const dimmedClass = shouldDimMarker ? " marker-dimmed" : "";
         const branchClass = branchCount > 1 ? " marker-branch" : "";
         const branchBadge = branchCount > 1 && branch.isPrimary ? `<b>${branchCount}</b>` : "";
         const icon = L.divIcon({
-          className: `restaurant-marker${selectedClass}${dimmedClass}${branchClass}`,
+          className: `restaurant-marker${dimmedClass}${branchClass}`,
           html: `<span style="--marker-color:${markerColor}">${rankLabel}${branchBadge}</span>`,
           iconSize: [38, 38],
           iconAnchor: [19, 19]
         });
 
-        L.marker([branch.lat as number, branch.lng as number], {
+        const marker = L.marker([branch.lat as number, branch.lng as number], {
           icon,
           keyboard: true,
           title: branch.displayName
@@ -104,9 +111,24 @@ export function useLeafletRestaurantMap({
           .on("click", () => onSelect(restaurant.id, branch.id))
           .bindTooltip(getTooltipLabel(restaurant, branch.displayName), { direction: "top", offset: [0, -15] })
           .addTo(layer);
+
+        markerEntriesRef.current.set(branch.id, {
+          branchId: branch.id,
+          lat: branch.lat as number,
+          lng: branch.lng as number,
+          marker,
+          restaurantId: restaurant.id
+        });
       });
     });
-  }, [highlightedRestaurantIds, mapNodeRef, onSelect, restaurants, savedHighlightActive, selectedBranchId, selectedId]);
+    applyMarkerSelection(markerEntriesRef.current, selectedIdRef.current, selectedBranchIdRef.current);
+  }, [highlightedRestaurantIds, mapNodeRef, onSelect, restaurants, savedHighlightActive]);
+
+  useEffect(() => {
+    selectedBranchIdRef.current = selectedBranchId;
+    selectedIdRef.current = selectedId;
+    applyMarkerSelection(markerEntriesRef.current, selectedId, selectedBranchId);
+  }, [selectedBranchId, selectedId]);
 
   useEffect(() => {
     const userLayer = mapNodeRef.current?.__leafletUserLayer;
@@ -152,22 +174,35 @@ export function useLeafletRestaurantMap({
 
   useEffect(() => {
     const map = mapNodeRef.current?.__leafletMap;
-    const selectedRestaurant = restaurants.find((restaurant) => restaurant.id === selectedId);
-    const selectedBranch = selectedRestaurant
-      ? getRestaurantBranches(selectedRestaurant).find((branch) => branch.id === selectedBranchId)
-      : undefined;
-    if (!map || !selectedBranch || !hasBranchCoordinate(selectedBranch)) return;
+    const selectedEntry = selectedBranchId ? markerEntriesRef.current.get(selectedBranchId) : undefined;
+    if (!map || !selectedEntry) return;
 
-    map.flyTo(
-      [selectedBranch.lat as number, selectedBranch.lng as number],
-      Math.max(map.getZoom(), 14),
-      { duration: 0.75 }
-    );
-  }, [mapNodeRef, restaurants, selectedBranchId, selectedId]);
+    const selectionKey = `${selectedEntry.branchId}:${selectedEntry.lat}:${selectedEntry.lng}`;
+    if (lastSelectionFlyToRef.current === selectionKey) return;
+    lastSelectionFlyToRef.current = selectionKey;
+
+    map.flyTo([selectedEntry.lat, selectedEntry.lng], Math.max(map.getZoom(), 14), { duration: 0.75 });
+  }, [mapNodeRef, selectedBranchId, selectedId]);
 }
 
 function getTooltipLabel(restaurant: Restaurant, branchName: string) {
   return branchName === restaurant.displayName ? restaurant.displayName : `${restaurant.displayName} · ${branchName}`;
+}
+
+type MarkerEntry = {
+  branchId: string;
+  lat: number;
+  lng: number;
+  marker: Marker;
+  restaurantId: string;
+};
+
+function applyMarkerSelection(entries: Map<string, MarkerEntry>, selectedId: string | undefined, selectedBranchId: string | undefined) {
+  entries.forEach((entry) => {
+    entry.marker
+      .getElement()
+      ?.classList.toggle("marker-selected", entry.restaurantId === selectedId && entry.branchId === selectedBranchId);
+  });
 }
 
 declare global {

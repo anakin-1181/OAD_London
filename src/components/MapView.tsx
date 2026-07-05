@@ -1,14 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Heart, LoaderCircle, LocateFixed, MapPin, Navigation, ShieldCheck, X } from "lucide-react";
 import type { LocationStatus } from "../domain/location";
 import { categoryMeta } from "../domain/restaurantConfig";
 import {
   getArea,
-  getBestRank,
   getBranchCountLabel,
-  getHeroImage,
-  getRestaurantBranches,
-  hasBranchCoordinate
+  getRestaurantPresentation
 } from "../domain/restaurants";
 import { CATEGORY_IDS, type Restaurant, type RestaurantBranch } from "../domain/types";
 import { useLeafletRestaurantMap } from "../hooks/useLeafletRestaurantMap";
@@ -51,7 +48,7 @@ export function MapView({
   const [locationPromptOpen, setLocationPromptOpen] = useState(false);
   const savedRestaurantIds = useMemo(() => savedRestaurants.map((restaurant) => restaurant.id), [savedRestaurants]);
   const branchPinCount = useMemo(
-    () => restaurants.reduce((count, restaurant) => count + getRestaurantBranches(restaurant).filter(hasBranchCoordinate).length, 0),
+    () => restaurants.reduce((count, restaurant) => count + getRestaurantPresentation(restaurant).branchCount, 0),
     [restaurants]
   );
   const { errorMessage, focusKey, isLocating, location, requestLocation, status } = useUserLocation();
@@ -93,6 +90,11 @@ export function MapView({
     requestLocation();
   }
 
+  const handleSavedRestaurantSelect = useCallback((restaurantId: string) => {
+    onCloseSavedList();
+    onSelect(restaurantId);
+  }, [onCloseSavedList, onSelect]);
+
   return (
     <section className="map-stage" aria-label="Interactive restaurant map">
       <div ref={mapNodeRef} className="map-canvas" />
@@ -128,10 +130,7 @@ export function MapView({
                 <SavedRestaurantButton
                   key={restaurant.id}
                   restaurant={restaurant}
-                  onSelect={() => {
-                    onCloseSavedList();
-                    onSelect(restaurant.id);
-                  }}
+                  onSelect={handleSavedRestaurantSelect}
                 />
               ))}
             </div>
@@ -307,26 +306,27 @@ function getLocationPromptCopy(status: LocationStatus, errorMessage: string | un
 
 type SavedRestaurantButtonProps = {
   restaurant: Restaurant;
-  onSelect: () => void;
+  onSelect: (restaurantId: string) => void;
 };
 
-function SavedRestaurantButton({ restaurant, onSelect }: SavedRestaurantButtonProps) {
-  const heroImage = getHeroImage(restaurant);
-  const rank = getBestRank(restaurant);
+const SavedRestaurantButton = memo(function SavedRestaurantButton({ restaurant, onSelect }: SavedRestaurantButtonProps) {
+  const presentation = getRestaurantPresentation(restaurant);
+  const heroImage = presentation.heroImage;
+  const rank = presentation.bestRank;
   const rankLabel = rank < 9999 ? `#${rank}` : "Review";
 
   return (
-    <button type="button" className="saved-list-row" onClick={onSelect}>
+    <button type="button" className="saved-list-row" onClick={() => onSelect(restaurant.id)}>
       <span className="saved-list-media" aria-hidden="true">
-        {heroImage ? <img src={heroImage} alt="" /> : restaurant.displayName.slice(0, 1)}
+        {heroImage ? <img src={heroImage} alt="" loading="lazy" decoding="async" width="48" height="48" /> : restaurant.displayName.slice(0, 1)}
       </span>
       <span className="saved-list-main">
         <strong>{restaurant.displayName}</strong>
         <small>
-          {[restaurant.cuisine || "Cuisine", restaurant.estimatedPrice, getBranchCountLabel(restaurant) || getArea(restaurant)].join(" · ")}
+          {[restaurant.cuisine || "Cuisine", restaurant.estimatedPrice, presentation.branchCountLabel || presentation.area].join(" · ")}
         </small>
       </span>
       <span className="saved-list-rank">{rankLabel}</span>
     </button>
   );
-}
+});

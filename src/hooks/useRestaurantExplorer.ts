@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORY_IDS, PRICE_TIERS, type CategoryId, type DiscoveryPreset, type PriceTier, type RestaurantFilters, type SortMode, type UserRecord, type VisitStatus } from "../domain/types";
 import {
   buildAreaOptions,
@@ -78,11 +78,11 @@ export function useRestaurantExplorer() {
     return count;
   }, [filters]);
 
-  function patchFilters(patch: Partial<RestaurantFilters>) {
+  const patchFilters = useCallback((patch: Partial<RestaurantFilters>) => {
     setFilters((current) => ({ ...current, ...patch }));
-  }
+  }, []);
 
-  function toggleCategory(categoryId: CategoryId) {
+  const toggleCategory = useCallback((categoryId: CategoryId) => {
     setFilters((current) => {
       if (current.activeCategories.includes(categoryId) && current.activeCategories.length === 1) return current;
 
@@ -92,9 +92,9 @@ export function useRestaurantExplorer() {
 
       return { ...current, activeCategories };
     });
-  }
+  }, []);
 
-  function togglePrice(price: PriceTier) {
+  const togglePrice = useCallback((price: PriceTier) => {
     setFilters((current) => {
       const nextPrices = current.activePrices.includes(price)
         ? current.activePrices.filter((item) => item !== price)
@@ -102,9 +102,9 @@ export function useRestaurantExplorer() {
 
       return { ...current, activePrices: nextPrices.length ? nextPrices : [...PRICE_TIERS] };
     });
-  }
+  }, []);
 
-  function applyPreset(preset: DiscoveryPreset) {
+  const applyPreset = useCallback((preset: DiscoveryPreset) => {
     const base = createInitialFilters();
 
     if (preset === "destination") {
@@ -140,31 +140,46 @@ export function useRestaurantExplorer() {
         showSavedOnly: true
       });
     }
-  }
+  }, []);
 
-  function resetFilters() {
+  const resetFilters = useCallback(() => {
     setFilters(createInitialFilters());
-  }
+  }, []);
 
-  function updateSelectedRecord(patch: UserRecord) {
+  const updateSelectedRecord = useCallback((patch: UserRecord) => {
     if (!selectedRestaurant) return;
     updateRecord(selectedRestaurant.id, patch);
-  }
+  }, [selectedRestaurant, updateRecord]);
 
-  function toggleSelectedStatus(status: VisitStatus) {
+  const toggleSelectedStatus = useCallback((status: VisitStatus) => {
     if (!selectedRestaurant) return;
     toggleStatus(selectedRestaurant.id, status);
-  }
+  }, [selectedRestaurant, toggleStatus]);
 
-  function selectRestaurant(restaurantId: string, branchId?: string) {
+  const selectRestaurant = useCallback((restaurantId: string, branchId?: string) => {
     const restaurant = restaurants.find((candidate) => candidate.id === restaurantId);
     setSelectedId(restaurantId);
     setSelectedBranchId(restaurant ? branchId || getPrimaryBranch(restaurant)?.id : branchId);
-  }
+  }, [restaurants]);
 
-  function selectBranch(branchId: string) {
+  const selectBranch = useCallback((branchId: string) => {
     setSelectedBranchId(branchId);
-  }
+  }, []);
+
+  const setQuery = useCallback((query: string) => patchFilters({ query }), [patchFilters]);
+  const setCuisineFilter = useCallback((cuisineFilter: string) => patchFilters({ cuisineFilter }), [patchFilters]);
+  const setAreaFilter = useCallback((areaFilter: string) => patchFilters({ areaFilter }), [patchFilters]);
+  const setSortMode = useCallback((sortMode: SortMode) => patchFilters({ sortMode }), [patchFilters]);
+  const toggleNeedsReview = useCallback(() => {
+    setFilters((current) => ({ ...current, showNeedsReview: !current.showNeedsReview }));
+  }, []);
+  const toggleSavedOnly = useCallback(() => {
+    setFilters((current) => ({ ...current, showSavedOnly: !current.showSavedOnly }));
+  }, []);
+  const closeRestaurant = useCallback(() => {
+    setSelectedId(undefined);
+    setSelectedBranchId(undefined);
+  }, []);
 
   return {
     dataset,
@@ -192,22 +207,19 @@ export function useRestaurantExplorer() {
       user: authUser
     },
     activeFilterCount,
-    setQuery: (query: string) => patchFilters({ query }),
-    setCuisineFilter: (cuisineFilter: string) => patchFilters({ cuisineFilter }),
-    setAreaFilter: (areaFilter: string) => patchFilters({ areaFilter }),
-    setSortMode: (sortMode: SortMode) => patchFilters({ sortMode }),
-    toggleNeedsReview: () => patchFilters({ showNeedsReview: !filters.showNeedsReview }),
-    toggleSavedOnly: () => patchFilters({ showSavedOnly: !filters.showSavedOnly }),
+    setQuery,
+    setCuisineFilter,
+    setAreaFilter,
+    setSortMode,
+    toggleNeedsReview,
+    toggleSavedOnly,
     toggleCategory,
     togglePrice,
     applyPreset,
     resetFilters,
     selectRestaurant,
     selectBranch,
-    closeRestaurant: () => {
-      setSelectedId(undefined);
-      setSelectedBranchId(undefined);
-    },
+    closeRestaurant,
     updateSelectedRecord,
     toggleSelectedStatus
   };
