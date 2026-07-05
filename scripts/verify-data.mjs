@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   buildVerifiedBranches,
   extractPostcode,
@@ -14,9 +15,12 @@ const dataPath = path.join(root, "public", "data", "oad-london-2026.json");
 const cacheDir = path.join(root, ".cache", "oad-verification");
 const reportsDir = path.join(root, "reports");
 const reportPath = path.join(reportsDir, "data-verification.md");
+const reportJsonPath = path.join(reportsDir, "data-verification.json");
 const verifyLimit = Number(process.env.VERIFY_LIMIT || 0);
 const verifyWebsites = process.env.VERIFY_WEBSITES !== "0";
 const nominatimThrottleMs = Number(process.env.NOMINATIM_THROTTLE_MS || 1100);
+const websiteTimeoutMs = Number(process.env.WEBSITE_TIMEOUT_MS || 8000);
+const websiteRetryCount = Number(process.env.WEBSITE_RETRY_COUNT || 1);
 const checkedAt = new Date().toISOString();
 let lastNominatimRequestAt = 0;
 
@@ -84,9 +88,11 @@ async function main() {
 
   writeJson(dataPath, nextDataset);
   writeFileSync(reportPath, buildReport(summaries), "utf8");
+  writeJson(reportJsonPath, buildReportJson(summaries));
   console.log(`Verified ${restaurants.length} restaurants`);
   console.log(`Wrote ${path.relative(root, dataPath)}`);
   console.log(`Wrote ${path.relative(root, reportPath)}`);
+  console.log(`Wrote ${path.relative(root, reportJsonPath)}`);
 }
 
 async function fetchWebsiteCandidates(restaurant) {
@@ -97,13 +103,13 @@ async function fetchWebsiteCandidates(restaurant) {
   try {
     if (existsSync(cachePath)) html = readFileSync(cachePath, "utf8");
     else {
-      const response = await fetch(restaurant.website, {
+      const response = await fetchWithRetry(restaurant.website, {
         headers: {
           "User-Agent": "OAD London Food Map data verification (contact: repository owner)"
         },
         redirect: "follow"
       });
-      if (!response.ok) return [];
+      if (!response?.ok) return [];
       html = await response.text();
       writeFileSync(cachePath, html, "utf8");
     }
@@ -180,12 +186,12 @@ async function fetchNominatimCandidate(query) {
   lastNominatimRequestAt = Date.now();
 
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&countrycodes=gb&q=${encodeURIComponent(query)}`;
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     headers: {
       "User-Agent": "OAD London Food Map free data verification (contact: repository owner)"
     }
   });
-  if (!response.ok) return null;
+  if (!response?.ok) return null;
   const results = await response.json();
   writeJson(cachePath, results);
   return results.find((result) => String(result.display_name || "").toLowerCase().includes("london")) || results[0] || null;
@@ -236,6 +242,47 @@ function buildMetadataVerification(summaries) {
   };
 }
 
+export function buildReportJson(summaries) {
+  const reviewItems = summaries.filter((item) => item.status !== "verified" || item.issues.length);
+  const multiBranchItems = summaries.filter((item) => item.branchCount > 1);
+
+  return {
+    generatedAt: checkedAt,
+    sourceMode: "free-oad-websites-nominatim",
+    controls: {
+      verifyLimit,
+      verifyWebsites,
+      nominatimThrottleMs,
+      websiteTimeoutMs,
+      websiteRetryCount
+    },
+    summary: {
+      restaurantsChecked: summaries.length,
+      branchPinsGenerated: summaries.reduce((total, item) => total + item.branchCount, 0),
+      verified: summaries.filter((item) => item.status === "verified").length,
+      needsReview: reviewItems.length,
+      multiBranchRestaurants: multiBranchItems.length
+    },
+    issueBreakdown: buildIssueBreakdown(summaries),
+    needsReview: reviewItems,
+    multiBranchRestaurants: multiBranchItems
+  };
+}
+
+export function buildIssueBreakdown(summaries) {
+  const counts = new Map();
+
+  summaries.forEach((item) => {
+    if (item.status === "verified" && !item.issues.length) return;
+    const issues = item.issues.length ? item.issues : ["Low confidence branch match."];
+    issues.forEach((issue) => counts.set(issue, (counts.get(issue) || 0) + 1));
+  });
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([issue, count]) => ({ issue, count }));
+}
+
 function mergeDataNotes(notes) {
   const nextNote = "Restaurant branch records are verified with free sources only: OAD data, official website structured data, and OpenStreetMap/Nominatim geocoding.";
 
@@ -248,6 +295,7 @@ function mergeDataNotes(notes) {
 function buildReport(summaries) {
   const reviewItems = summaries.filter((item) => item.status !== "verified" || item.issues.length);
   const multiBranchItems = summaries.filter((item) => item.branchCount > 1);
+  const issueBreakdown = buildIssueBreakdown(summaries);
 
   return [
     "# OAD London Data Verification Report",
@@ -255,6 +303,9 @@ function buildReport(summaries) {
     `Generated: ${checkedAt}`,
     "Source mode: Free sources only (OAD + official websites + OpenStreetMap/Nominatim)",
     `Website verification: ${verifyWebsites ? "enabled" : "disabled"}`,
+    `Website timeout: ${websiteTimeoutMs}ms`,
+    `Website retries: ${websiteRetryCount}`,
+    `Nominatim throttle: ${nominatimThrottleMs}ms`,
     "",
     "## Summary",
     "",
@@ -263,6 +314,12 @@ function buildReport(summaries) {
     `- Verified: ${summaries.filter((item) => item.status === "verified").length}`,
     `- Needs review: ${reviewItems.length}`,
     `- Multi-branch restaurants: ${multiBranchItems.length}`,
+    "",
+    "## Issue Breakdown",
+    "",
+    ...(issueBreakdown.length
+      ? issueBreakdown.map((item) => `- ${item.issue}: ${item.count}`)
+      : ["- None."]),
     "",
     "## Multi-Branch Restaurants",
     "",
@@ -276,6 +333,37 @@ function buildReport(summaries) {
       ? reviewItems.map((item) => `- ${item.name}: ${item.issues.join("; ") || `confidence ${Math.round(item.confidence * 100)}%`}`)
       : ["- None."])
   ].join("\n");
+}
+
+async function fetchWithRetry(url, options = {}) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= websiteRetryCount; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), websiteTimeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      if (response.ok || !isRetryableStatus(response.status) || attempt === websiteRetryCount) return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt === websiteRetryCount) return null;
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    await delay(300 * (attempt + 1));
+  }
+
+  if (lastError) return null;
+  return null;
+}
+
+function isRetryableStatus(status) {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
 }
 
 function hash(value) {
@@ -301,7 +389,9 @@ export function describeCandidateDebug(restaurant, candidate) {
   };
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

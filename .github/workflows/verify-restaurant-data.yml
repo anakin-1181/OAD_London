@@ -2,20 +2,39 @@ name: Verify restaurant data
 
 on:
   workflow_dispatch:
+    inputs:
+      verify_limit:
+        description: "Optional number of restaurants to verify. Use 0 for the full dataset."
+        required: false
+        default: "0"
+      verify_websites:
+        description: "Fetch official website structured data during verification."
+        required: false
+        default: "1"
   schedule:
     - cron: "21 6 * * 1"
 
 permissions:
   contents: write
   pull-requests: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: verify-restaurant-data
+  cancel-in-progress: true
 
 jobs:
   verify:
     name: Verify OAD London restaurants
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
-      VERIFY_WEBSITES: "1"
+      VERIFY_LIMIT: ${{ github.event.inputs.verify_limit || '0' }}
+      VERIFY_WEBSITES: ${{ github.event.inputs.verify_websites || '1' }}
       NOMINATIM_THROTTLE_MS: "1200"
+      WEBSITE_TIMEOUT_MS: "8000"
+      WEBSITE_RETRY_COUNT: "1"
 
     steps:
       - name: Checkout
@@ -30,8 +49,45 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Restore verification cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/oad-verification
+          key: oad-verification-${{ runner.os }}-${{ hashFiles('public/data/oad-london-2026.json') }}
+          restore-keys: |
+            oad-verification-${{ runner.os }}-
+
       - name: Verify restaurant data
         run: npm run data:verify
+
+      - name: Publish verification summary
+        if: always()
+        run: |
+          if [ -f reports/data-verification.md ]; then
+            cat reports/data-verification.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Data verification report was not generated" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-verification-report
+          path: reports/
+          if-no-files-found: warn
+
+      - name: Detect data changes
+        id: diff
+        run: |
+          if git diff --quiet -- public/data/oad-london-2026.json; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No dataset changes detected." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Dataset changes detected and will be proposed in a review PR." >> "$GITHUB_STEP_SUMMARY"
+            git diff --stat -- public/data/oad-london-2026.json >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Typecheck
         run: npm run typecheck
@@ -46,11 +102,29 @@ jobs:
         run: npm run build
 
       - name: Open data review pull request
+        id: cpr
+        if: steps.diff.outputs.has_changes == 'true'
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
           branch: chore/verify-restaurant-data
           commit-message: "Verify OAD London restaurant data"
           title: "Verify OAD London restaurant data"
           body-path: reports/data-verification.md
+          add-paths: public/data/oad-london-2026.json
           labels: data, automated
           delete-branch: true
+
+      - name: Report pull request fallback
+        if: steps.diff.outputs.has_changes == 'true' && steps.cpr.outcome == 'failure'
+        run: |
+          {
+            echo "### Data review PR was not opened"
+            echo ""
+            echo "Verification completed and artifacts were uploaded, but the PR creation step failed."
+            echo "Check repository Actions settings and token permissions:"
+            echo ""
+            echo "- Workflow permissions must allow read and write access."
+            echo "- GitHub Actions must be allowed to create pull requests."
+            echo "- The workflow needs contents, pull-requests, and issues write permissions when labels are applied."
+          } >> "$GITHUB_STEP_SUMMARY"

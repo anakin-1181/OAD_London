@@ -4,6 +4,10 @@ import {
   createFallbackBranch,
   scoreCandidate
 } from "../../scripts/lib/verification.mjs";
+import {
+  buildIssueBreakdown,
+  buildReportJson
+} from "../../scripts/verify-data.mjs";
 
 const baseRestaurant = {
   id: "roti-king",
@@ -113,5 +117,27 @@ describe("restaurant verification matching", () => {
       isPrimary: true
     });
     expect(branch.sources.map((source) => source.type)).toContain("oad");
+  });
+
+  it("summarises verification issues for reports and workflow artifacts", () => {
+    const summaries = [
+      { id: "verified", name: "Verified", branchCount: 1, status: "verified", confidence: 0.92, issues: [] },
+      { id: "closed", name: "Closed", branchCount: 1, status: "needs-review", confidence: 0.8, issues: ["One or more branch candidates are marked closed."] },
+      { id: "weak", name: "Weak", branchCount: 2, status: "needs-review", confidence: 0.51, issues: [] },
+      { id: "closed-two", name: "Closed Two", branchCount: 1, status: "needs-review", confidence: 0.7, issues: ["One or more branch candidates are marked closed."] }
+    ];
+
+    expect(buildIssueBreakdown(summaries)).toEqual([
+      { issue: "One or more branch candidates are marked closed.", count: 2 },
+      { issue: "Low confidence branch match.", count: 1 }
+    ]);
+
+    expect(buildReportJson(summaries).summary).toMatchObject({
+      restaurantsChecked: 4,
+      branchPinsGenerated: 5,
+      verified: 1,
+      needsReview: 3,
+      multiBranchRestaurants: 1
+    });
   });
 });
